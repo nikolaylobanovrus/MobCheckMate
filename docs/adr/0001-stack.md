@@ -25,6 +25,9 @@
 - `compileSdk` 37: текущие AndroidX (Compose 1.12, core 1.19) требуют API 37 и AGP 9.1+.
   `targetSdk` 36 — минимум Google Play с 31.08.2026; переход на 37 — отдельной задачей после проверки
   изменений поведения Android 17. `minSdk` 26.
+- Идентификатор приложения `ru.fourvic.chess` построен от домена владельца 4vic.ru. Часть «4vic» записана как
+  «fourvic»: Android требует, чтобы каждая часть идентификатора начиналась с буквы. Пакеты Kotlin используют тот же
+  префикс: `ru.fourvic.chess` (Android), `ru.fourvic.chess.shared`, `ru.fourvic.chess.server`.
 - Варианты сборки (flavors): `play` и `rustore`; позже `appgallery`. Отличаются платежами, push-транспортом и
   ссылками на магазин.
 

@@ -7,7 +7,7 @@ plugins {
 }
 
 application {
-    mainClass.set("com.mobcheckmate.server.ApplicationKt")
+    mainClass.set("ru.fourvic.chess.server.ApplicationKt")
 }
 
 java {

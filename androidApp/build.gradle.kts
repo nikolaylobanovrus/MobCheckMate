@@ -5,13 +5,14 @@ plugins {
 }
 
 android {
-    namespace = "com.mobcheckmate.chess"
+    namespace = "ru.fourvic.chess"
     // Compile against Android 17 (API 37) as current AndroidX requires; target stays at the Play minimum.
     compileSdk = 37
 
     defaultConfig {
-        // The application ID cannot change after the first publication. Confirm it before release.
-        applicationId = "com.mobcheckmate.chess"
+        // Reverse of the owner's domain 4vic.ru; "4vic" becomes "fourvic" because every segment must start
+        // with a letter. The application ID cannot change after the first publication.
+        applicationId = "ru.fourvic.chess"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
