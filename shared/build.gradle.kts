@@ -29,5 +29,10 @@ kotlin {
 tasks.withType<Test>().configureEach {
     providers.gradleProperty("engineMatch").orNull?.let { systemProperty("engineMatch", it) }
     providers.gradleProperty("enginePairs").orNull?.let { systemProperty("enginePairs", it) }
-    testLogging.showStandardStreams = providers.gradleProperty("engineMatch").isPresent
+    // Calibration against a local Stockfish binary (never bundled); see StockfishCalibrationTest.
+    for (name in listOf("stockfishPath", "stockfishElo", "stockfishMoveTime", "engineLevels")) {
+        providers.gradleProperty(name).orNull?.let { systemProperty(name, it) }
+    }
+    testLogging.showStandardStreams =
+        providers.gradleProperty("engineMatch").isPresent || providers.gradleProperty("stockfishPath").isPresent
 }
