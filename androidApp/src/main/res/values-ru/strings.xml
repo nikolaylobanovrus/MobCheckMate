@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Шахматы онлайн</string>
+    <string name="white_to_move">Ход белых</string>
+    <string name="black_to_move">Ход чёрных</string>
+    <string name="check">Шах!</string>
+    <string name="checkmate_white_wins">Мат. Победили белые</string>
+    <string name="checkmate_black_wins">Мат. Победили чёрные</string>
+    <string name="stalemate">Пат. Ничья</string>
+    <string name="draw_repetition">Ничья: троекратное повторение</string>
+    <string name="draw_insufficient_material">Ничья: недостаточно материала</string>
+    <string name="draw_fifty_moves">Ничья: правило 50 ходов</string>
+    <string name="new_game">Новая партия</string>
+    <string name="undo">Отменить ход</string>
+    <string name="flip_board">Перевернуть доску</string>
+    <string name="promotion_title">Превратить пешку в</string>
+    <string name="piece_queen">Ферзя</string>
+    <string name="piece_rook">Ладью</string>
+    <string name="piece_bishop">Слона</string>
+    <string name="piece_knight">Коня</string>
+    <string name="board_description">Шахматная доска</string>
+    <string name="build_label">Сборка: %1$s %2$s</string>
+</resources>

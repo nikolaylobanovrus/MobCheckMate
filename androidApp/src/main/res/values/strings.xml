@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chess Online</string>
+    <string name="white_to_move">White to move</string>
+    <string name="black_to_move">Black to move</string>
+    <string name="check">Check!</string>
+    <string name="checkmate_white_wins">Checkmate. White wins</string>
+    <string name="checkmate_black_wins">Checkmate. Black wins</string>
+    <string name="stalemate">Stalemate. Draw</string>
+    <string name="draw_repetition">Draw by threefold repetition</string>
+    <string name="draw_insufficient_material">Draw: insufficient material</string>
+    <string name="draw_fifty_moves">Draw by the fifty-move rule</string>
+    <string name="new_game">New game</string>
+    <string name="undo">Undo</string>
+    <string name="flip_board">Flip board</string>
+    <string name="promotion_title">Promote pawn to</string>
+    <string name="piece_queen">Queen</string>
+    <string name="piece_rook">Rook</string>
+    <string name="piece_bishop">Bishop</string>
+    <string name="piece_knight">Knight</string>
+    <string name="board_description">Chess board</string>
+    <string name="build_label">Build: %1$s %2$s</string>
+</resources>

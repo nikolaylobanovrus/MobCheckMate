@@ -92,7 +92,7 @@ MobCheckMate/
 
 | Слой | Решение |
 |---|---|
-| Android | `compileSdk`/`targetSdk` 36, `minSdk` 26, AAB, 64-бит, поддержка страниц памяти 16 КБ (NDK r28+, если появится нативный код), edge-to-edge |
+| Android | AGP 9.4, `compileSdk` 37, `targetSdk` 36, `minSdk` 26, AAB, 64-бит, страницы памяти 16 КБ (проверка `zipalign -c -P 16`), edge-to-edge |
 | Правила | kchesslib (Apache 2.0, KMP-порт chesslib): генерация ходов, FEN, PGN, SAN, Chess960 |
 | Задачи | Lichess Puzzle Database (CC0, около 6 млн задач с рейтингом и темами): 20–50 тыс. офлайн, остальное догружать |
 | Сервер | Ktor WebSocket, PostgreSQL, Redis; серверные часы с ленивым пересчётом и компенсацией задержки; реконнект; анти-чит по корреляции с движком и разбросу времени на ход, подозрительные игроки уходят в отдельный пул |

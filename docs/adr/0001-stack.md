@@ -21,12 +21,17 @@
 - Правила шахмат — **kchesslib** (`io.github.cvb941:kchesslib`, Apache-2.0 по POM на Maven Central). Это
   мультиплатформенный порт chesslib (Apache-2.0) с тем же API (`com.github.bhlangonijr.chesslib`), собранный под
   JVM, iOS, JS и Wasm.
-- Сборка: AGP 8.13, Gradle 8.14, Kotlin 2.4, `compileSdk`/`targetSdk` 36, `minSdk` 26, Java 17 bytecode.
+- Сборка: AGP 9.4 со встроенной поддержкой Kotlin, Gradle 9.8, Kotlin 2.4, Java 17 bytecode.
+- `compileSdk` 37: текущие AndroidX (Compose 1.12, core 1.19) требуют API 37 и AGP 9.1+.
+  `targetSdk` 36 — минимум Google Play с 31.08.2026; переход на 37 — отдельной задачей после проверки
+  изменений поведения Android 17. `minSdk` 26.
 - Варианты сборки (flavors): `play` и `rustore`; позже `appgallery`. Отличаются платежами, push-транспортом и
   ссылками на магазин.
 
 ## Последствия
 - Любая логика, которая нужна и клиенту, и серверу, пишется в `shared/commonMain` без JVM-специфичных API.
-- Переход на AGP 9 (встроенная поддержка Kotlin) — отдельная задача после стабилизации MVP.
+- Плагин `org.jetbrains.kotlin.android` в Android-модуле не подключается: в AGP 9 Kotlin встроен.
+- Нативный код уже есть транзитивно (`libandroidx.graphics.path.so` из Compose). Каждая релизная сборка
+  проверяется на выравнивание под страницы памяти 16 КБ (`zipalign -c -P 16`).
 - Если kchesslib перестанет поддерживаться, у него тот же API, что у chesslib, и на JVM можно переключиться на
   оригинал без изменения кода.
