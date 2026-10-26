@@ -142,7 +142,7 @@ private fun statusText(state: GameUiState): String = when (state.status) {
 }
 
 @Composable
-private fun PromotionDialog(onChosen: (Promotion?) -> Unit) {
+internal fun PromotionDialog(onChosen: (Promotion?) -> Unit) {
     AlertDialog(
         onDismissRequest = { onChosen(null) },
         title = { Text(stringResource(R.string.promotion_title)) },

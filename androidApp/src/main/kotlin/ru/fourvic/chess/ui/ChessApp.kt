@@ -15,10 +15,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.fourvic.chess.R
+import ru.fourvic.chess.puzzles.AssetPuzzleSource
+import ru.fourvic.chess.puzzles.PrefsPuzzleProgressStore
 import ru.fourvic.chess.settings.LocalAppSettings
 import ru.fourvic.chess.settings.SettingsRepository
 import ru.fourvic.chess.ui.common.ScreenScaffold
@@ -27,6 +31,8 @@ import ru.fourvic.chess.ui.game.GameViewModel
 import ru.fourvic.chess.ui.game.Opponent
 import ru.fourvic.chess.ui.home.HomeAction
 import ru.fourvic.chess.ui.home.HomeScreen
+import ru.fourvic.chess.ui.puzzles.PuzzleScreen
+import ru.fourvic.chess.ui.puzzles.PuzzleViewModel
 import ru.fourvic.chess.ui.settings.SettingsScreen
 
 /** Top-level destinations. Kept as names in a saveable back stack. */
@@ -44,9 +50,10 @@ fun ChessApp(settingsRepository: SettingsRepository) {
     }
     BackHandler(enabled = stack.size > 1, onBack = back)
 
+    val context = LocalContext.current.applicationContext
     CompositionLocalProvider(LocalAppSettings provides settings) {
         when (route) {
-            Route.HOME -> HomeScreen(onAction = { action ->
+            Route.HOME -> HomeScreen(puzzleSubtitle = dailyPuzzleSubtitle(PrefsPuzzleProgressStore(context)), onAction = { action ->
                 open(
                     when (action) {
                         HomeAction.ONLINE -> Route.ONLINE
@@ -68,7 +75,12 @@ fun ChessApp(settingsRepository: SettingsRepository) {
                 onBack = back,
             )
             Route.SETTINGS -> SettingsScreen(settings = settings, onChange = settingsRepository::update, onBack = back)
-            Route.PUZZLES -> ComingSoon(R.string.home_puzzles, back)
+            Route.PUZZLES -> PuzzleScreen(
+                viewModel = viewModel(key = "puzzles") {
+                    PuzzleViewModel(AssetPuzzleSource(context), PrefsPuzzleProgressStore(context))
+                },
+                onBack = back,
+            )
             Route.ONLINE -> ComingSoon(R.string.home_online, back)
             Route.TOURNAMENTS -> ComingSoon(R.string.home_tournaments, back)
         }
@@ -82,4 +94,13 @@ private fun ComingSoon(title: Int, onBack: () -> Unit) {
             Text(stringResource(R.string.coming_soon), style = MaterialTheme.typography.bodyLarge)
         }
     }
+}
+
+@Composable
+private fun dailyPuzzleSubtitle(store: PrefsPuzzleProgressStore): String {
+    val progress = store.load()
+    val today = System.currentTimeMillis() / 86_400_000L
+    val status = stringResource(if (progress.isDailySolved(today)) R.string.puzzle_daily_done else R.string.puzzle_daily_waiting)
+    val streak = progress.currentStreak(today)
+    return if (streak > 0) "$status · ${pluralStringResource(R.plurals.puzzle_streak, streak, streak)}" else status
 }
