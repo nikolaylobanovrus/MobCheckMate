@@ -24,3 +24,10 @@ kotlin {
         }
     }
 }
+
+// Manual engine strength matches: ./gradlew :shared:jvmTest -PengineMatch=4 --tests '*LevelMatchTest*'
+tasks.withType<Test>().configureEach {
+    providers.gradleProperty("engineMatch").orNull?.let { systemProperty("engineMatch", it) }
+    providers.gradleProperty("enginePairs").orNull?.let { systemProperty("enginePairs", it) }
+    testLogging.showStandardStreams = providers.gradleProperty("engineMatch").isPresent
+}

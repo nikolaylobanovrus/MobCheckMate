@@ -20,4 +20,25 @@
     <string name="piece_knight">Knight</string>
     <string name="board_description">Chess board</string>
     <string name="build_label">Build: %1$s %2$s</string>
+    <string name="computer_thinking">Computer is thinking…</string>
+    <string name="checkmate_you_win">Checkmate. You win!</string>
+    <string name="checkmate_computer_wins">Checkmate. The computer wins</string>
+    <string name="opponent">Opponent</string>
+    <string name="opponent_computer">Computer</string>
+    <string name="opponent_friend">Friend on this device</string>
+    <string name="opponent_friend_label">Two players on one device</string>
+    <string name="opponent_computer_label">Computer, level %1$d: %2$s (≈%3$d)</string>
+    <string name="level">Level</string>
+    <string name="level_description">%1$s, rating about %2$d</string>
+    <string name="level_1">Beginner</string>
+    <string name="level_2">Casual</string>
+    <string name="level_3">Intermediate</string>
+    <string name="level_4">Strong</string>
+    <string name="level_5">Expert</string>
+    <string name="your_color">Your pieces</string>
+    <string name="color_white">White</string>
+    <string name="color_black">Black</string>
+    <string name="color_random">Random</string>
+    <string name="play">Play</string>
+    <string name="cancel">Cancel</string>
 </resources>

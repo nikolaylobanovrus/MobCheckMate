@@ -20,4 +20,25 @@
     <string name="piece_knight">Коня</string>
     <string name="board_description">Шахматная доска</string>
     <string name="build_label">Сборка: %1$s %2$s</string>
+    <string name="computer_thinking">Компьютер думает…</string>
+    <string name="checkmate_you_win">Мат. Вы победили!</string>
+    <string name="checkmate_computer_wins">Мат. Победил компьютер</string>
+    <string name="opponent">Соперник</string>
+    <string name="opponent_computer">Компьютер</string>
+    <string name="opponent_friend">Друг на этом устройстве</string>
+    <string name="opponent_friend_label">Игра вдвоём на одном устройстве</string>
+    <string name="opponent_computer_label">Компьютер, уровень %1$d: %2$s (≈%3$d)</string>
+    <string name="level">Уровень</string>
+    <string name="level_description">%1$s, рейтинг около %2$d</string>
+    <string name="level_1">Новичок</string>
+    <string name="level_2">Любитель</string>
+    <string name="level_3">Средний</string>
+    <string name="level_4">Сильный</string>
+    <string name="level_5">Эксперт</string>
+    <string name="your_color">Ваши фигуры</string>
+    <string name="color_white">Белые</string>
+    <string name="color_black">Чёрные</string>
+    <string name="color_random">Случайно</string>
+    <string name="play">Играть</string>
+    <string name="cancel">Отмена</string>
 </resources>

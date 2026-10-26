@@ -13,9 +13,9 @@ import com.github.bhlangonijr.chesslib.move.Move
  * Wraps kchesslib so the rest of the code base never depends on the library types directly.
  * The class is not thread-safe; the server keeps one instance per game behind a single writer.
  */
-class ChessGame(fen: String = START_FEN) {
+class ChessGame(private val startFen: String = START_FEN) {
 
-    private val board = Board().apply { loadFromFen(fen) }
+    private val board = Board().apply { loadFromFen(startFen) }
     private val playedMoves = mutableListOf<ChessMove>()
 
     /** Current position in FEN. */
@@ -52,6 +52,12 @@ class ChessGame(fen: String = START_FEN) {
         return true
     }
 
+    /** Independent copy with the same start position and move history, safe to hand to another thread. */
+    fun copy(): ChessGame = ChessGame(startFen).also { copy -> playedMoves.forEach { copy.play(it) } }
+
+    /** Copy of the library board, including position history for repetition detection. For the engine. */
+    internal fun boardCopy(): Board = board.clone()
+
     /** Takes back the last move. Returns false when there is nothing to undo. */
     fun undo(): Boolean {
         if (playedMoves.isEmpty()) return false
@@ -85,7 +91,7 @@ private fun Square.toName(): String = name.lowercase()
 
 private fun Side.toColor(): PlayerColor = if (this == Side.WHITE) PlayerColor.WHITE else PlayerColor.BLACK
 
-private fun Move.toChessMove(): ChessMove = ChessMove(
+internal fun Move.toChessMove(): ChessMove = ChessMove(
     from = from.toName(),
     to = to.toName(),
     promotion = when (promotion.pieceType) {

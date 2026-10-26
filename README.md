@@ -24,12 +24,18 @@
 - Рейтинг Glicko-2 (сверен с эталонным примером из статьи Glickman'а) и зачёт турнирной арены.
 - Android-экран партии на одном устройстве: доска на Canvas, подсветка ходов, превращение пешки, отмена хода,
   переворот доски, светлая и тёмная тема, русский и английский язык, портрет и ландшафт.
+- Бот на 5 уровнях: собственный движок в общем модуле, работает на телефоне без интернета. Младшие уровни
+  ошибаются по-человечески, пятый варьирует дебюты. Перед партией выбираются соперник, уровень и цвет.
 - Сервер на Ktor: проверка здоровья и WebSocket-песочница, которая проверяет каждый ход той же логикой, что и
   клиент.
 
 | Светлая тема | Тёмная тема | Мат, русский язык |
 |---|---|---|
 | ![](androidApp/src/test/screenshots/game_light.png) | ![](androidApp/src/test/screenshots/game_dark.png) | ![](androidApp/src/test/screenshots/game_checkmate_ru.png) |
+
+| Игра с компьютером | Новая партия |
+|---|---|
+| ![](androidApp/src/test/screenshots/game_vs_computer_ru.png) | ![](androidApp/src/test/screenshots/new_game_dialog_ru.png) |
 
 ## Структура репозитория
 
@@ -60,4 +66,5 @@ MobCheckMate/
 ./gradlew :androidApp:verifyRoborazziPlayDebug   # сравнить скриншоты с эталонами
 ./gradlew :androidApp:recordRoborazziPlayDebug   # перезаписать эталонные скриншоты
 ./gradlew :androidApp:bundlePlayRelease      # AAB для публикации (подпись настраивается отдельно)
+./gradlew :shared:jvmTest -PengineMatch=10 --tests '*LevelMatchTest*'   # матчи уровней бота друг с другом
 ```
