@@ -17,9 +17,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
 import ru.fourvic.chess.R
 import ru.fourvic.chess.ui.game.GameUiState
-import ru.fourvic.chess.ui.theme.BoardColors
+import ru.fourvic.chess.settings.LocalAppSettings
+import ru.fourvic.chess.ui.theme.BoardPalette
 import ru.fourvic.chess.shared.chess.BoardPiece
 import ru.fourvic.chess.shared.chess.PieceKind
 import ru.fourvic.chess.shared.chess.PlayerColor
@@ -36,6 +42,9 @@ fun ChessBoard(
     modifier: Modifier = Modifier,
 ) {
     val painters = rememberPiecePainters()
+    val settings = LocalAppSettings.current
+    val palette = BoardPalette.of(settings.boardTheme)
+    val textMeasurer = rememberTextMeasurer()
     val flipped = state.flipped
     val tapModifier = remember(flipped) {
         Modifier.pointerInput(flipped) {
@@ -61,14 +70,39 @@ fun ChessBoard(
                 val square = squareAt(column, row, flipped)
                 val topLeft = Offset(column * cell, row * cell)
                 val isLight = (column + row) % 2 == 0
-                drawRect(if (isLight) BoardColors.light else BoardColors.dark, topLeft, cellSize)
+                drawRect(if (isLight) palette.light else palette.dark, topLeft, cellSize)
 
                 val lastMove = state.lastMove
                 if (lastMove != null && (square == lastMove.from || square == lastMove.to)) {
-                    drawRect(BoardColors.lastMove, topLeft, cellSize)
+                    drawRect(palette.lastMove, topLeft, cellSize)
                 }
-                if (square == state.selected) drawRect(BoardColors.selected, topLeft, cellSize)
-                if (square == state.checkedKing) drawRect(BoardColors.check, topLeft, cellSize)
+                if (square == state.selected) drawRect(palette.selected, topLeft, cellSize)
+                if (square == state.checkedKing) drawRect(palette.check, topLeft, cellSize)
+
+                if (settings.showCoordinates) {
+                    // Opposite square colour keeps the label readable on every theme.
+                    val style = TextStyle(
+                        color = if (isLight) palette.dark else palette.light,
+                        fontSize = (cell * 0.16f / density).sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (row == 7) {
+                        val label = textMeasurer.measure(square.substring(0, 1), style)
+                        // Colour is passed at draw time: cached layouts ignore it.
+                        drawText(
+                            label,
+                            color = style.color,
+                            topLeft = Offset(topLeft.x + cell - label.size.width - cell * 0.05f, topLeft.y + cell - label.size.height),
+                        )
+                    }
+                    if (column == 0) {
+                        drawText(
+                            textMeasurer.measure(square.substring(1), style),
+                            color = style.color,
+                            topLeft = Offset(topLeft.x + cell * 0.05f, topLeft.y),
+                        )
+                    }
+                }
 
                 state.pieces[square]?.let { piece ->
                     val painter = painters.getValue(piece)
@@ -78,12 +112,12 @@ fun ChessBoard(
                     }
                 }
 
-                if (square in state.targets) {
+                if (settings.showLegalMoves && square in state.targets) {
                     val center = Offset(topLeft.x + cell / 2, topLeft.y + cell / 2)
                     if (state.pieces[square] == null) {
-                        drawCircle(BoardColors.target, radius = cell * 0.15f, center = center)
+                        drawCircle(palette.target, radius = cell * 0.15f, center = center)
                     } else {
-                        drawCircle(BoardColors.target, radius = cell * 0.45f, center = center, style = Stroke(cell * 0.07f))
+                        drawCircle(palette.target, radius = cell * 0.45f, center = center, style = Stroke(cell * 0.07f))
                     }
                 }
             }

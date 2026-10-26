@@ -10,6 +10,8 @@ Apache 2.0 требует передавать копию лицензии и с
 | [kchesslib](https://github.com/cvb941/kchesslib) 1.0.5 | `shared` (клиент и сервер) | Apache-2.0 | Мультиплатформенный порт chesslib |
 | [chesslib](https://github.com/bhlangonijr/chesslib) | исходный код kchesslib | Apache-2.0 | © Ben-Hur Carlos Vieira Langoni Junior |
 | [Chessnut pieces](https://github.com/LexLuengas/chessnut-pieces) | `androidApp/src/main/res/drawable/piece_*.xml` | Apache-2.0 | © 2015 Alexis Luengas. Взято из коммита `2b8eaf14a31edad7e9deb53b1473e1d4857868a9`, SVG сконвертированы в VectorDrawable скриптом `tools/svg_to_vector_drawable.py` без изменения формы. Копия лицензии: `third_party/chessnut-pieces/` |
+| [Lichess puzzle database](https://database.lichess.org/#puzzles) | `androidApp/src/main/assets/puzzles.tsv` | CC0 1.0 | 29 505 задач, отобраны скриптом `tools/extract_puzzles.py`. Ссылка на источник не обязательна, но указываем её из уважения |
+| Material Symbols «arrow_back» | `androidApp/src/main/res/drawable/ic_arrow_back.xml` | Apache-2.0 | Google |
 | kotlinx.serialization | `shared` | Apache-2.0 | |
 | AndroidX, Jetpack Compose | `androidApp` | Apache-2.0 | |
 
@@ -20,6 +22,8 @@ Apache 2.0 требует передавать копию лицензии и с
 | Ktor | Apache-2.0 |
 | Logback | EPL-1.0 или LGPL-2.1 |
 
+Звуки (`androidApp/src/main/res/raw`) синтезированы скриптом `tools/generate_sounds.py`, сторонних лицензий нет.
+
 ## Только тесты и сборка
 
 | Компонент | Лицензия |
@@ -27,6 +31,7 @@ Apache 2.0 требует передавать копию лицензии и с
 | Robolectric | MIT |
 | Roborazzi | Apache-2.0 |
 | JUnit 4 | EPL-1.0 |
+| Stockfish (локальная калибровка уровней бота, не входит в репозиторий и приложение) | GPL-3.0 |
 
 ## Что сознательно не используем
 

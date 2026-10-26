@@ -17,6 +17,7 @@ class ChessGame(private val startFen: String = START_FEN) {
 
     private val board = Board().apply { loadFromFen(startFen) }
     private val playedMoves = mutableListOf<ChessMove>()
+    private val captures = mutableListOf<Boolean>()
 
     /** Current position in FEN. */
     val fen: String get() = board.fen
@@ -27,6 +28,9 @@ class ChessGame(private val startFen: String = START_FEN) {
     val moves: List<ChessMove> get() = playedMoves.toList()
 
     val isCheck: Boolean get() = board.isKingAttacked
+
+    /** True when the last move took a piece, including en passant. For sounds and animations. */
+    val lastMoveWasCapture: Boolean get() = captures.lastOrNull() ?: false
 
     fun legalMoves(): List<ChessMove> = board.legalMoves().map { it.toChessMove() }
 
@@ -47,8 +51,12 @@ class ChessGame(private val startFen: String = START_FEN) {
     fun play(move: ChessMove): Boolean {
         if (status.isFinished) return false
         val legal = board.legalMoves().firstOrNull { it.toChessMove() == move } ?: return false
+        val mover = board.getPiece(legal.from)
+        val capture = board.getPiece(legal.to) != Piece.NONE ||
+            (mover.pieceType == PieceType.PAWN && legal.from.file != legal.to.file)
         board.doMove(legal)
         playedMoves += move
+        captures += capture
         return true
     }
 
@@ -63,6 +71,7 @@ class ChessGame(private val startFen: String = START_FEN) {
         if (playedMoves.isEmpty()) return false
         board.undoMove()
         playedMoves.removeAt(playedMoves.lastIndex)
+        captures.removeAt(captures.lastIndex)
         return true
     }
 

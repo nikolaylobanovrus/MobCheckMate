@@ -15,7 +15,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,7 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.fourvic.chess.BuildConfig
 import ru.fourvic.chess.R
+import ru.fourvic.chess.audio.MoveSounds
 import ru.fourvic.chess.ui.board.ChessBoard
+import ru.fourvic.chess.ui.common.ScreenScaffold
 import ru.fourvic.chess.shared.chess.GameStatus
 import ru.fourvic.chess.shared.chess.PlayerColor
 import ru.fourvic.chess.shared.chess.Promotion
@@ -39,12 +40,20 @@ import ru.fourvic.chess.shared.engine.BotLevel
 import kotlin.random.Random
 
 @Composable
-fun GameScreen(viewModel: GameViewModel = viewModel(), showSetupOnStart: Boolean = false) {
+fun GameScreen(
+    viewModel: GameViewModel = viewModel(),
+    showSetupOnStart: Boolean = false,
+    onBack: (() -> Unit)? = null,
+) {
     val state = viewModel.state
     var showSetup by rememberSaveable { mutableStateOf(showSetupOnStart) }
+    MoveSounds(key = state.ply, sound = soundFor(state))
+    val title = stringResource(
+        if (state.opponent is Opponent.Computer) R.string.home_computer else R.string.home_friend,
+    )
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    Scaffold { padding ->
+    ScreenScaffold(title = title, onBack = onBack) { padding ->
         val board = @Composable { modifier: Modifier ->
             ChessBoard(
                 state = state,

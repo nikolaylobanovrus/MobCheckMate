@@ -22,11 +22,25 @@ fun ChessOnlineTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Compo
  * Board colours do not follow the app theme on purpose: pieces must stay readable in dark mode,
  * which was a long-standing bug in the reference app.
  */
-object BoardColors {
-    val light = Color(0xFFEEDDBB)
-    val dark = Color(0xFFB58863)
-    val selected = Color(0x9946A35A)
-    val lastMove = Color(0x66E8D44D)
-    val check = Color(0xAAD7263D)
-    val target = Color(0x66202020)
+data class BoardPalette(
+    val light: Color,
+    val dark: Color,
+    val selected: Color = Color(0x9946A35A),
+    val lastMove: Color = Color(0x66E8D44D),
+    val check: Color = Color(0xAAD7263D),
+    val target: Color = Color(0x66202020),
+) {
+    companion object {
+        val Classic = BoardPalette(light = Color(0xFFEEDDBB), dark = Color(0xFFB58863))
+        val Green = BoardPalette(light = Color(0xFFEEEED2), dark = Color(0xFF769656))
+        val Blue = BoardPalette(light = Color(0xFFDEE3E6), dark = Color(0xFF8CA2AD))
+        val Gray = BoardPalette(light = Color(0xFFE6E6E6), dark = Color(0xFF9A9A9A))
+
+        fun of(theme: ru.fourvic.chess.settings.BoardTheme) = when (theme) {
+            ru.fourvic.chess.settings.BoardTheme.CLASSIC -> Classic
+            ru.fourvic.chess.settings.BoardTheme.GREEN -> Green
+            ru.fourvic.chess.settings.BoardTheme.BLUE -> Blue
+            ru.fourvic.chess.settings.BoardTheme.GRAY -> Gray
+        }
+    }
 }

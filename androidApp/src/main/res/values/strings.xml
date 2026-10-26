@@ -41,4 +41,27 @@
     <string name="color_random">Random</string>
     <string name="play">Play</string>
     <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="home_tagline">Play online, against the computer or a friend</string>
+    <string name="home_online">Play online</string>
+    <string name="home_online_hint">Rated games with players around the world</string>
+    <string name="home_computer">Against the computer</string>
+    <string name="home_computer_hint">Five levels, from beginner to expert</string>
+    <string name="home_friend">With a friend</string>
+    <string name="home_friend_hint">Two players on one device</string>
+    <string name="home_puzzles">Puzzles</string>
+    <string name="home_puzzles_hint">Daily puzzle and tactics training</string>
+    <string name="home_tournaments">Tournaments</string>
+    <string name="home_tournaments_hint">Hourly arenas and private tournaments with friends</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_settings_hint">Board, sounds and account</string>
+    <string name="settings_board_theme">Board colours</string>
+    <string name="theme_classic">Classic</string>
+    <string name="theme_green">Green</string>
+    <string name="theme_blue">Blue</string>
+    <string name="theme_gray">Grey</string>
+    <string name="settings_coordinates">Show coordinates</string>
+    <string name="settings_legal_moves">Highlight legal moves</string>
+    <string name="settings_sound">Sounds</string>
 </resources>

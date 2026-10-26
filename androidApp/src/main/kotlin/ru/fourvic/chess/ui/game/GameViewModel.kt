@@ -43,6 +43,9 @@ data class GameUiState(
     val canUndo: Boolean = false,
     val opponent: Opponent = Opponent.Friend,
     val botThinking: Boolean = false,
+    /** Number of moves played; changes with every move, so the UI can react (sounds). */
+    val ply: Int = 0,
+    val lastMoveWasCapture: Boolean = false,
 )
 
 /**
@@ -173,6 +176,8 @@ class GameViewModel(
             canUndo = canUndo(),
             opponent = opponent,
             botThinking = false,
+            ply = game.moves.size,
+            lastMoveWasCapture = game.lastMoveWasCapture,
         )
     }
 

@@ -37,7 +37,9 @@ class ChessGameTest {
         game.playAll("d2d4")
         assertTrue("d3" in game.legalTargets("c4"))
 
+        assertFalse(game.lastMoveWasCapture)
         game.playAll("c4d3")
+        assertTrue(game.lastMoveWasCapture, "en passant counts as a capture")
         assertNull(game.pieceAt("d4"), "the d4 pawn is captured en passant")
         assertEquals(BoardPiece(PlayerColor.BLACK, PieceKind.PAWN), game.pieceAt("d3"))
     }
