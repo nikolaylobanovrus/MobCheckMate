@@ -11,7 +11,7 @@
 | Документ | О чём |
 |---|---|
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Полный план: анализ референса, стек, этапы разработки, публикация, маркетинг, метрики |
-| [docs/TOURNAMENTS.md](docs/TOURNAMENTS.md) | Спецификация турниров и лиг, платный вход, fair-play, модель данных |
+| [docs/TOURNAMENTS.md](docs/TOURNAMENTS.md) | Спецификация бесплатных турниров и лиг, fair-play, модель данных |
 | [docs/CHECKLIST_GOOGLE_PLAY.md](docs/CHECKLIST_GOOGLE_PLAY.md) | Чек-лист публикации в Google Play |
 | [docs/CHECKLIST_RUSTORE.md](docs/CHECKLIST_RUSTORE.md) | Чек-лист публикации в RuStore |
 | [docs/adr/](docs/adr/) | Архитектурные решения (ADR) |
