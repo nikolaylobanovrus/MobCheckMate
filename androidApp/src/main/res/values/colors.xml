@@ -2,4 +2,6 @@
 <resources>
     <color name="launcher_background">#FF2E4A3B</color>
     <color name="launcher_foreground">#FFF4EBD9</color>
+    <color name="launcher_outline">#FF16261E</color>
+    <color name="launcher_board">#FF365744</color>
 </resources>

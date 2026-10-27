@@ -26,3 +26,6 @@ captures/
 google-services.json
 agconnect-services.json
 .env
+
+# Release signing
+keystore.properties

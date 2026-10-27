@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import ru.fourvic.chess.BuildConfig
 import ru.fourvic.chess.R
 
 /** Destinations reachable from the home screen. */
@@ -67,10 +66,6 @@ fun HomeScreen(onAction: (HomeAction) -> Unit, puzzleSubtitle: String? = null) {
                     }
                 }
             }
-            Text(
-                stringResource(R.string.build_label, BuildConfig.STORE, BuildConfig.VERSION_NAME),
-                style = MaterialTheme.typography.labelSmall,
-            )
         }
     }
 }

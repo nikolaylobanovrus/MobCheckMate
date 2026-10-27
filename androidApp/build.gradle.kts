@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.roborazzi)
+}
+
+// Release signing comes from keystore.properties (not in git); see keystore.properties.example.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use(::load)
 }
 
 android {
@@ -17,6 +25,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        // Privacy policy, terms and the account deletion page, served by the game server.
+        buildConfigField("String", "SITE_URL", "\"https://chess.4vic.ru\"")
     }
 
     // One code base, one build per store: payments, push transport and store links differ.
@@ -32,6 +42,17 @@ android {
         }
     }
 
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // The emulator reaches the host machine at 10.0.2.2; run the server locally with ./gradlew :server:run.
@@ -39,6 +60,7 @@ android {
         }
         release {
             buildConfigField("String", "SERVER_URL", "\"wss://chess.4vic.ru/ws\"")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -70,6 +92,8 @@ android {
             )
             // Address of a running server for OnlineClientIntegrationTest, e.g. -PonlineServer=ws://localhost:8080/ws.
             providers.gradleProperty("onlineServer").orNull?.let { url -> it.systemProperty("onlineServer", url) }
+            // Renders the store listing images (StoreAssetsTest) only when asked: -PstoreAssets.
+            if (providers.gradleProperty("storeAssets").isPresent) it.systemProperty("storeAssets", "true")
         }
     }
 }

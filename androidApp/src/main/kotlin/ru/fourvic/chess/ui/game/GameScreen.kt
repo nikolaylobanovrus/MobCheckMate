@@ -30,7 +30,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.random.Random
-import ru.fourvic.chess.BuildConfig
 import ru.fourvic.chess.R
 import ru.fourvic.chess.audio.MoveSounds
 import ru.fourvic.chess.shared.chess.GameStatus
@@ -72,10 +71,6 @@ fun GameScreen(
                     OutlinedButton(onClick = viewModel::flipBoard) { Text(stringResource(R.string.flip_board)) }
                 }
                 Button(onClick = { showSetup = true }) { Text(stringResource(R.string.new_game)) }
-                Text(
-                    stringResource(R.string.build_label, BuildConfig.STORE, BuildConfig.VERSION_NAME),
-                    style = MaterialTheme.typography.labelSmall,
-                )
             }
         }
 

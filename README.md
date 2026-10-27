@@ -14,6 +14,8 @@
 | [docs/TOURNAMENTS.md](docs/TOURNAMENTS.md) | Спецификация бесплатных турниров и лиг, fair-play, модель данных |
 | [docs/CHECKLIST_GOOGLE_PLAY.md](docs/CHECKLIST_GOOGLE_PLAY.md) | Чек-лист публикации в Google Play |
 | [docs/CHECKLIST_RUSTORE.md](docs/CHECKLIST_RUSTORE.md) | Чек-лист публикации в RuStore |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | Развёртывание сервера: VPS, домен, Docker, резервные копии |
+| [docs/store/](docs/store/README.md) | Тексты карточек, Data safety, возрастной рейтинг, иконка, баннер, скриншоты |
 | [docs/adr/](docs/adr/) | Архитектурные решения (ADR) |
 | [docs/THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md) | Сторонние компоненты и их лицензии |
 
@@ -35,7 +37,7 @@
   Часы ведёт сервер (учёт задержки сети, таймер первого хода), ход виден сразу и подтверждается сервером,
   есть предход. Ничья, сдача, отмена до первых ходов, быстрые фразы вместо чата, реванш. При обрыве связи
   приложение переподключается и продолжает партию; соперник видит обратный отсчёт до присуждения победы.
-  В настройках — смена имени и удаление аккаунта.
+  В настройках — смена имени и удаление аккаунта, ссылки на документы и лицензии.
 - Турниры-арены: ежечасные пуля и блиц, ежедневные блиц 3+2 и рапид; приватные арены по коду для друзей.
   Вход и пауза в любой момент, автоматический подбор пар, «огонь» и берсерк, таблица с последними результатами.
 - Сервер на Ktor: аккаунты, подбор пар, партии, рейтинги, арены; хранение в PostgreSQL или в памяти для разработки.
@@ -60,12 +62,13 @@
 
 ```
 MobCheckMate/
-├── shared/       # Kotlin Multiplatform: правила шахмат (kchesslib), рейтинг, правила турниров
+├── shared/       # Kotlin Multiplatform: правила, движок бота, задачи, рейтинг, протокол, правила арен
 ├── androidApp/   # Android-клиент на Jetpack Compose, flavors play / rustore
-├── server/       # Игровой сервер на Ktor (WebSocket)
-├── tools/        # Вспомогательные скрипты (конвертер SVG в VectorDrawable)
+├── server/       # Игровой сервер на Ktor (WebSocket): аккаунты, партии, рейтинги, арены; сайт с документами
+├── deploy/       # docker-compose: сервер + PostgreSQL + Caddy (HTTPS)
+├── tools/        # Скрипты: задачи, звуки, конвертер SVG в VectorDrawable
 ├── third_party/  # Лицензии сторонних ассетов
-└── docs/         # Roadmap, спецификации, чек-листы, ADR
+└── docs/         # Roadmap, спецификации, чек-листы, ADR, развёртывание, карточки магазинов
 ```
 
 Позже появятся `engine-worker/` (серверный Stockfish) и `pairing/` (bbpPairings для швейцарок).
@@ -84,8 +87,12 @@ MobCheckMate/
 ./gradlew :androidApp:testPlayDebugUnitTest  # unit-тесты экрана
 ./gradlew :androidApp:verifyRoborazziPlayDebug   # сравнить скриншоты с эталонами
 ./gradlew :androidApp:recordRoborazziPlayDebug   # перезаписать эталонные скриншоты
-./gradlew :androidApp:bundlePlayRelease      # AAB для публикации (подпись настраивается отдельно)
+./gradlew :androidApp:bundlePlayRelease      # AAB для Google Play (подпись: keystore.properties.example)
+./gradlew :androidApp:assembleRustoreRelease # APK для RuStore
 ./gradlew :shared:jvmTest -PengineMatch=10 --tests '*LevelMatchTest*'   # матчи уровней бота друг с другом
 ./gradlew :androidApp:testPlayDebugUnitTest -PonlineServer=ws://localhost:8080/ws --tests '*OnlineClientIntegrationTest*'
                                      # настоящий клиент против запущенного сервера
 ```
+
+Сервер в продакшене: [docs/DEPLOY.md](docs/DEPLOY.md). Тексты и картинки для магазинов: [docs/store/](docs/store/README.md).
+CI (GitHub Actions) прогоняет тесты, lint, собирает APK и Docker-образ сервера на каждый push.

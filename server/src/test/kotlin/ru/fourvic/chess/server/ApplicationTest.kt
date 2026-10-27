@@ -53,7 +53,10 @@ class ApplicationTest {
         val health = client.get("/health")
         assertEquals(HttpStatusCode.OK, health.status)
         assertTrue(health.bodyAsText().contains("\"status\":\"ok\""))
-        assertEquals(HttpStatusCode.OK, client.get("/privacy.html").status)
+        for (page in listOf("/", "/privacy.html", "/terms.html", "/delete-account.html", "/style.css")) {
+            assertEquals(HttpStatusCode.OK, client.get(page).status, page)
+        }
+        assertTrue(client.get("/delete-account.html").bodyAsText().contains("Удалить аккаунт"))
     }
 
     @Test

@@ -1,17 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Placeholder pawn on a 108dp adaptive-icon canvas. Replace with the final icon before release. -->
+<!-- Launcher icon: the Chessnut knight (Copyright 2015 Alexis Luengas, Apache License 2.0) inside the 66dp safe zone
+     of the 108dp adaptive-icon canvas. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="@color/launcher_foreground"
-        android:pathData="M54,30a9,9 0,1 1,0 18a9,9 0,1 1,0 -18z" />
-    <path
-        android:fillColor="@color/launcher_foreground"
-        android:pathData="M47,50h14l5,20h-24z" />
-    <path
-        android:fillColor="@color/launcher_foreground"
-        android:pathData="M38,72h32v6h-32z" />
+    <group
+        android:scaleX="0.1"
+        android:scaleY="0.1"
+        android:translateX="14.6"
+        android:translateY="12.7">
+        <path
+            android:pathData="M641.4,692.1H356.701C423.301,614.3,461.4,536.5,461.4,468.4c0-50.802-19-97.602-50-127.8c16.801,35.6,24.5,81.5,10.5,119.9 c-10.801,29.8-42.199,48.9-66.601,59.2C335.9,537,305.4,575.2,290.2,597.9L267.8,656l-120.9-51.5c8.5-46.6,29.5-153.7,43.4-212.8 v-39.4C206.9,302.4,232,249.2,239,233c-18.4-23.4-18-68.1-24.3-97.7c33.5,1.8,68.199,25.5,81.5,60.4c47.3-15.3,106-22.9,148.6-13.2 c54.3,12.3,139.4,56.3,196.601,98.1V692.1L641.4,692.1z"
+            android:fillColor="@color/launcher_foreground"
+            android:strokeColor="@color/launcher_outline"
+            android:strokeWidth="29.16"
+            android:strokeLineCap="round"
+            android:strokeMiterLimit="10" />
+        <path
+            android:pathData="M198.301,600c11.5-21.4-3-36.1-22.4-25.2 L198.301,600z"
+            android:fillColor="@color/launcher_outline"
+            android:strokeColor="@color/launcher_outline"
+            android:strokeWidth="9.169"
+            android:strokeMiterLimit="10" />
+        <path
+            android:pathData="M269.201,355.8l4.5,3.7l-21.5,24.9 c-4.5,3.6-14.101,7.4-18.601,8c-6.6-5.2-12.899-25-6-34.5C238.501,355.7,260.4,355.7,269.201,355.8z"
+            android:fillColor="@color/launcher_outline"
+            android:strokeColor="@color/launcher_outline"
+            android:strokeWidth="0.952"
+            android:strokeMiterLimit="10" />
+        <path
+            android:pathData="M358.301,181.5c4.601-23.2-6.899-56.3-35.1-70.6c-16.9,25.4-19.5,57.2-7,75.1"
+            android:fillColor="@color/launcher_foreground"
+            android:strokeColor="@color/launcher_outline"
+            android:strokeWidth="23.76"
+            android:strokeLineCap="square"
+            android:strokeMiterLimit="10" />
+    </group>
 </vector>

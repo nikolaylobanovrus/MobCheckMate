@@ -231,4 +231,11 @@
     <string name="arena_daily_rapid">Daily Rapid</string>
     <string name="reason_opponent_no_start">The opponent did not make the first move</string>
     <string name="reason_you_no_start">You did not make the first move</string>
+    <!-- About -->
+    <string name="about_title">About</string>
+    <string name="about_privacy">Privacy policy</string>
+    <string name="about_terms">Terms of use</string>
+    <string name="about_delete_account">How to delete the account</string>
+    <string name="about_licenses">Open-source licenses</string>
+    <string name="close">Close</string>
 </resources>

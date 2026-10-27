@@ -1,6 +1,5 @@
 package ru.fourvic.chess.server
 
-import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -9,7 +8,6 @@ import io.ktor.server.http.content.staticResources
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
@@ -93,8 +91,7 @@ fun Application.module(
 
     routing {
         get("/health") { call.respond(Health("ok", SERVER_VERSION, PROTOCOL_VERSION)) }
-        get("/") { call.respondText(LANDING, ContentType.Text.Html) }
-        // Privacy policy, terms and the account deletion page required by the stores.
+        // Landing page, privacy policy, terms and the account deletion page required by the stores.
         staticResources("/", "site")
 
         webSocket("/ws") {
@@ -170,11 +167,3 @@ class RateLimiter(private val capacity: Int, private val refillPerSecond: Double
         return true
     }
 }
-
-private val LANDING = """
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Шахматы онлайн</title></head><body style="font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px">
-<h1>Шахматы онлайн</h1><p>Сервер игры работает.</p>
-<ul><li><a href="/privacy.html">Политика конфиденциальности</a></li><li><a href="/terms.html">Пользовательское соглашение</a></li>
-<li><a href="/delete-account.html">Удаление аккаунта</a></li></ul></body></html>
-""".trimIndent()
