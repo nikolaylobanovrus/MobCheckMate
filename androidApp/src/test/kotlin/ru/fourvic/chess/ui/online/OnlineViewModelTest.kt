@@ -67,6 +67,7 @@ class OnlineViewModelTest {
         val vm = viewModel()
         assertEquals(1, client.starts)
         assertEquals(me, vm.state.me)
+        assertEquals(ClientMessage.RequestGame, client.sent.single(), "asks for a game that may already be running")
 
         vm.seek(Clock(180, 2))
         assertEquals(ClientMessage.Seek(Clock(180, 2), rated = true), client.sent.last())

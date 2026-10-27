@@ -204,6 +204,11 @@ sealed interface ClientMessage {
     @SerialName("rename")
     data class Rename(val name: String) : ClientMessage
 
+    /** Asks for the snapshot of the player's current game, if any (for screens opened after the connect). */
+    @Serializable
+    @SerialName("game_state")
+    data object RequestGame : ClientMessage
+
     /** Before the own first move in an arena game: half the time, no increment, a bonus point for a win. */
     @Serializable
     @SerialName("berserk")

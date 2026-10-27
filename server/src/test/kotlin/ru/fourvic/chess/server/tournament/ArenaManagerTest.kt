@@ -100,6 +100,8 @@ class ArenaManagerTest {
         val game = inboxA.last<ServerMessage.Game>().game
         assertEquals(hourlyId, game.tournamentId)
         assertEquals(game.gameId, inboxB.last<ServerMessage.Game>().game.gameId)
+        world.game(a, ClientMessage.RequestGame) // a screen opened later asks for the game again
+        assertEquals(2, inboxA.all<ServerMessage.Game>().size)
 
         val (white, black) = colours(game, a, b)
         world.game(white, ClientMessage.Move(game.gameId, "f2f3", 0))

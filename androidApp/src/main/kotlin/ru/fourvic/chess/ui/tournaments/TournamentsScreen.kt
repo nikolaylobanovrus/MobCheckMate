@@ -97,6 +97,12 @@ fun TournamentsScreen(
     }
     PauseWhenInBackground(viewModel)
 
+    // An arena game in progress takes the user to its tournament, wherever they are on this screen.
+    val playingIn = game.tournamentId.takeIf { game.phase == OnlinePhase.PLAYING }
+    LaunchedEffect(playingIn) {
+        if (playingIn != null && state.selectedId != playingIn) viewModel.open(playingIn)
+    }
+
     val selected = state.selectedId
     val showGame = selected != null && game.tournamentId == selected &&
         (game.phase == OnlinePhase.PLAYING || game.phase == OnlinePhase.FINISHED)

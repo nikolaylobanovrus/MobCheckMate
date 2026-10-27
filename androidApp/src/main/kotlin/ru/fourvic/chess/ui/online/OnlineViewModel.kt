@@ -114,6 +114,8 @@ class OnlineViewModel(
             client.welcome.collect { w -> if (w != null) state = state.copy(me = w.player, ratings = w.ratings) }
         }
         viewModelScope.launch { client.messages.collect(::onMessage) }
+        // A game that started before this screen existed (the server sends it on connect) is asked for again.
+        client.send(ClientMessage.RequestGame)
         if (tickerEnabled) {
             viewModelScope.launch {
                 while (isActive) {

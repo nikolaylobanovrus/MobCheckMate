@@ -126,6 +126,10 @@ class GameServer(
             is ClientMessage.Rematch -> roomFor(id, message.gameId)?.rematch(id) ?: noGame(id, message.gameId)
             is ClientMessage.Chat -> roomFor(id, message.gameId)?.chat(id, message.phrase) ?: noGame(id, message.gameId)
             is ClientMessage.Berserk -> roomFor(id, message.gameId)?.berserk(id) ?: noGame(id, message.gameId)
+            ClientMessage.RequestGame -> {
+                activeGameOf(id)?.let { room -> send(id, ServerMessage.Game(room.snapshot())) }
+                null
+            }
             is ClientMessage.TournamentCommand -> null // handled by the arena manager
             is ClientMessage.Ping -> {
                 send(id, ServerMessage.Pong(message.clientTime, now()))

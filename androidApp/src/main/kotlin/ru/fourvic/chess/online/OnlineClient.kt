@@ -68,8 +68,8 @@ class WebSocketOnlineClient(
     private val _state = MutableStateFlow(ConnectionState.OFFLINE)
     private val _welcome = MutableStateFlow<ServerMessage.Welcome?>(null)
     private val _messages = MutableSharedFlow<ServerMessage>(extraBufferCapacity = 128)
-    private var outbox = Channel<ClientMessage>(Channel.BUFFERED)
-    private var job: Job? = null
+    @Volatile private var outbox = Channel<ClientMessage>(Channel.BUFFERED)
+    @Volatile private var job: Job? = null
 
     override val state: StateFlow<ConnectionState> = _state.asStateFlow()
     override val welcome: StateFlow<ServerMessage.Welcome?> = _welcome.asStateFlow()
