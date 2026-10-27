@@ -60,6 +60,24 @@ class ChessGame(private val startFen: String = START_FEN) {
         return true
     }
 
+    /**
+     * Whether [color] still has material that could ever deliver mate: a pawn, rook or queen, or two minor pieces.
+     * Used to decide that a flag fall against a lone king (or king and minor) is a draw.
+     */
+    fun hasMatingMaterial(color: PlayerColor): Boolean {
+        var minors = 0
+        for (square in SQUARES_FROM_WHITE) {
+            val piece = pieceAt(square) ?: continue
+            if (piece.color != color) continue
+            when (piece.kind) {
+                PieceKind.PAWN, PieceKind.ROOK, PieceKind.QUEEN -> return true
+                PieceKind.BISHOP, PieceKind.KNIGHT -> minors++
+                PieceKind.KING -> Unit
+            }
+        }
+        return minors >= 2
+    }
+
     /** Independent copy with the same start position and move history, safe to hand to another thread. */
     fun copy(): ChessGame = ChessGame(startFen).also { copy -> playedMoves.forEach { copy.play(it) } }
 

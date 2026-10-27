@@ -10,6 +10,9 @@ serialization = "1.12.0"
 logback = "1.5.38"
 junit = "4.13.2"
 coroutines = "1.10.2"
+postgresql = "42.7.14"
+hikari = "7.1.0"
+h2 = "2.5.252"
 robolectric = "4.17"
 roborazzi = "1.77.0"
 
@@ -33,6 +36,10 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 junit = { module = "junit:junit", version.ref = "junit" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }

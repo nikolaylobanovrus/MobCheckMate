@@ -1,71 +1,119 @@
 package ru.fourvic.chess.server
 
-import ru.fourvic.chess.shared.chess.GameStatus
-import ru.fourvic.chess.shared.chess.PlayerColor
-import ru.fourvic.chess.shared.protocol.ErrorCode
-import ru.fourvic.chess.shared.protocol.ProtocolJson
-import ru.fourvic.chess.shared.protocol.ServerMessage
-import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
+import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
 import io.ktor.websocket.Frame
+import io.ktor.websocket.close
 import io.ktor.websocket.readText
+import kotlinx.coroutines.withTimeout
+import ru.fourvic.chess.server.game.RoomSettings
+import ru.fourvic.chess.server.storage.InMemoryStorage
+import ru.fourvic.chess.shared.protocol.ClientMessage
+import ru.fourvic.chess.shared.protocol.Clock
+import ru.fourvic.chess.shared.protocol.EndReason
+import ru.fourvic.chess.shared.protocol.GameResult
+import ru.fourvic.chess.shared.protocol.ServerMessage
+import ru.fourvic.chess.shared.protocol.decodeServerMessage
+import ru.fourvic.chess.shared.protocol.encode
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import io.ktor.client.plugins.websocket.WebSockets as ClientWebSockets
 
 class ApplicationTest {
 
-    @Test
-    fun healthReportsOk() = testApplication {
-        application { module() }
-        val response = client.get("/health")
-        assertEquals(HttpStatusCode.OK, response.status)
-        assertTrue(response.bodyAsText().contains("\"status\":\"ok\""))
+    private suspend fun DefaultClientWebSocketSession.sendMessage(message: ClientMessage) = send(Frame.Text(message.encode()))
+
+    /** Next message of type [T], skipping others (for example pongs or connection notices). */
+    private suspend inline fun <reified T : ServerMessage> DefaultClientWebSocketSession.expect(): T = withTimeout(5_000) {
+        while (true) {
+            val message = decodeServerMessage((incoming.receive() as Frame.Text).readText())
+            if (message is T) return@withTimeout message
+        }
+        @Suppress("UNREACHABLE_CODE")
+        error("unreachable")
+    }
+
+    private suspend fun HttpClient.join(token: String? = null): Pair<DefaultClientWebSocketSession, ServerMessage.Welcome> {
+        val session = webSocketSession("/ws")
+        session.sendMessage(ClientMessage.Hello(token = token, locale = "ru"))
+        return session to session.expect<ServerMessage.Welcome>()
     }
 
     @Test
-    fun sandboxValidatesMovesOnTheServer() = testApplication {
-        application { module() }
+    fun healthAndLegalPages() = testApplication {
+        application { module(InMemoryStorage()) }
+        val health = client.get("/health")
+        assertEquals(HttpStatusCode.OK, health.status)
+        assertTrue(health.bodyAsText().contains("\"status\":\"ok\""))
+        assertEquals(HttpStatusCode.OK, client.get("/privacy.html").status)
+    }
+
+    @Test
+    fun twoPlayersFindEachOtherPlayReconnectResignAndRematch() = testApplication {
+        application { module(InMemoryStorage(), RoomSettings(disconnectGraceMs = 10_000)) }
         val ws = createClient { install(ClientWebSockets) }
 
-        ws.webSocket("/ws/sandbox") {
-            suspend fun receive(): ServerMessage =
-                ProtocolJson.decodeFromString(ServerMessage.serializer(), (incoming.receive() as Frame.Text).readText())
+        val (a, welcomeA) = ws.join()
+        val (b, welcomeB) = ws.join()
+        assertTrue(welcomeA.player.name.startsWith("Игрок"))
+        assertEquals(1500, welcomeA.player.rating)
 
-            val initial = assertIs<ServerMessage.State>(receive())
-            assertEquals(PlayerColor.WHITE, initial.sideToMove)
+        a.sendMessage(ClientMessage.Seek(Clock(180, 2)))
+        a.expect<ServerMessage.Seeking>()
+        b.sendMessage(ClientMessage.Seek(Clock(180, 2)))
+        val gameA = a.expect<ServerMessage.Game>().game
+        val gameB = b.expect<ServerMessage.Game>().game
+        assertEquals(gameA.gameId, gameB.gameId)
+        assertTrue(gameA.rated)
 
-            send(Frame.Text("""{"type":"move","uci":"e2e4"}"""))
-            val afterE4 = assertIs<ServerMessage.State>(receive())
-            assertEquals(PlayerColor.BLACK, afterE4.sideToMove)
-            assertEquals("e2e4", afterE4.lastMove)
+        val aIsWhite = gameA.white.id == welcomeA.player.id
+        var white = if (aIsWhite) a else b
+        var black = if (aIsWhite) b else a
+        val blackToken = if (aIsWhite) welcomeB.token else welcomeA.token
+        val id = gameA.gameId
 
-            send(Frame.Text("""{"type":"move","uci":"e2e4"}"""))
-            assertEquals(ErrorCode.ILLEGAL_MOVE, assertIs<ServerMessage.Error>(receive()).code)
+        white.sendMessage(ClientMessage.Move(id, "e2e4", 0))
+        assertEquals("e2e4", white.expect<ServerMessage.Moved>().uci)
+        black.expect<ServerMessage.Moved>()
 
-            send(Frame.Text("""{"type":"jump"}"""))
-            assertEquals(ErrorCode.BAD_REQUEST, assertIs<ServerMessage.Error>(receive()).code)
-        }
-    }
+        // Black drops and comes back: the game is restored from the snapshot.
+        black.close()
+        assertFalse(white.expect<ServerMessage.OpponentConnection>().connected)
+        val (blackAgain, _) = ws.join(blackToken)
+        black = blackAgain
+        val restored = black.expect<ServerMessage.Game>().game
+        assertEquals(listOf("e2e4"), restored.moves)
+        assertTrue(white.expect<ServerMessage.OpponentConnection>().connected)
 
-    @Test
-    fun sandboxReportsCheckmate() {
-        val session = SandboxSession()
-        listOf("f2f3", "e7e5", "g2g4").forEach { session.handle("""{"type":"move","uci":"$it"}""") }
-        val final = assertIs<ServerMessage.State>(session.handle("""{"type":"move","uci":"d8h4"}"""))
-        assertEquals(GameStatus.CHECKMATE, final.status)
-        assertEquals(4, final.ply)
-    }
+        black.sendMessage(ClientMessage.Move(id, "e7e5", 1))
+        white.expect<ServerMessage.Moved>()
+        white.sendMessage(ClientMessage.Resign(id))
+        val ended = black.expect<ServerMessage.Ended>()
+        assertEquals(GameResult.BLACK_WON, ended.result)
+        assertEquals(EndReason.RESIGNATION, ended.reason)
+        assertTrue((ended.blackRatingDiff ?: 0) > 0)
+        assertTrue((ended.whiteRatingDiff ?: 0) < 0)
+        white.expect<ServerMessage.Ended>()
 
-    @Test
-    fun sandboxRejectsBrokenPosition() {
-        val session = SandboxSession()
-        val reply = session.handle("""{"type":"new_game","fen":"not a fen"}""")
-        assertEquals(ErrorCode.INVALID_POSITION, assertIs<ServerMessage.Error>(reply).code)
+        white.sendMessage(ClientMessage.Rematch(id))
+        black.expect<ServerMessage.RematchOffered>()
+        black.sendMessage(ClientMessage.Rematch(id))
+        val rematch = white.expect<ServerMessage.Game>().game
+        black.expect<ServerMessage.Game>()
+        assertEquals(gameA.white.id, rematch.black.id, "colours are swapped in the rematch")
+        assertTrue(rematch.white.rating > rematch.black.rating, "the winner's new rating is used")
+
+        white.sendMessage(ClientMessage.DeleteAccount)
+        white.expect<ServerMessage.AccountDeleted>()
+        val notice = black.expect<ServerMessage.Ended>()
+        assertNotNull(notice)
     }
 }

@@ -29,7 +29,11 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.logback.classic)
+    implementation(libs.postgresql)
+    implementation(libs.hikari)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.h2)
 }
