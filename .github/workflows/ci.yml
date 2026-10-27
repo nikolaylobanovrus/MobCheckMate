@@ -68,3 +68,41 @@ jobs:
           for i in $(seq 1 30); do curl -fsS localhost:8080/health && exit 0; sleep 2; done
           docker logs chess
           exit 1
+
+  # The VPS deploys from this branch by itself (deploy/beget/chess-pull.sh, every five minutes). It holds only the
+  # server build of the latest commit that passed the jobs above: one commit, no history, no sources.
+  publish-server:
+    name: Publish server build for the VPS
+    needs: [build, server-image]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/busy-meitner-2gl6it')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-server
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew --console=plain :server:installDist
+
+      - name: Push to deploy/chess-server-dist
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd server/build/install/server
+          echo "${GITHUB_SHA::10} ${GITHUB_REF_NAME}" > SOURCE
+          git init -q -b dist
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Server build of ${GITHUB_SHA::10} (${GITHUB_REF_NAME})"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/deploy/chess-server-dist

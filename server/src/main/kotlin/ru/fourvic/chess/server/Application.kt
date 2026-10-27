@@ -77,7 +77,8 @@ fun main() {
 }
 
 @Serializable
-data class Health(val status: String, val version: String, val protocol: Int)
+/** [games] lets the deploy script wait for running games before a restart, which would end them. */
+data class Health(val status: String, val version: String, val protocol: Int, val players: Int = 0, val games: Int = 0)
 
 fun Application.module(
     storage: Storage = InMemoryStorage(),
@@ -98,7 +99,9 @@ fun Application.module(
     }
 
     routing {
-        get("/health") { call.respond(Health("ok", SERVER_VERSION, PROTOCOL_VERSION)) }
+        get("/health") {
+            call.respond(Health("ok", SERVER_VERSION, PROTOCOL_VERSION, server.onlinePlayers(), server.runningGames()))
+        }
         // Landing page, privacy policy, terms and the account deletion page required by the stores.
         staticResources("/", "site")
 

@@ -107,6 +107,8 @@ class GameServer(
     }
 
     fun isOnline(accountId: String) = connections.containsKey(accountId)
+    fun onlinePlayers(): Int = connections.size
+    fun runningGames(): Int = rooms.values.count { !it.isOver }
     fun countryOf(accountId: String): String? = countries[accountId]
     fun activeGameOf(accountId: String): GameRoom? = activeGame[accountId]?.let { rooms[it] }
     fun room(id: String): GameRoom? = rooms[id]

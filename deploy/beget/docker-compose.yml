@@ -1,0 +1,53 @@
+# Chess Victory on the Beget VPS: PostgreSQL and the game server. setup.sh installs this file as
+# /opt/chess/docker-compose.yml; chess-pull.sh puts the build CI published into /opt/chess/current and restarts
+# the server. The host nginx proxies chess.4vic.ru to 127.0.0.1:18080.
+#
+# Images come from Google's mirror of Docker Hub: Docker Hub itself is unreliable from Russia.
+name: chess
+
+services:
+  db:
+    image: mirror.gcr.io/library/postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chess
+      POSTGRES_USER: chess
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in /opt/chess/.env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chess -d chess"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+
+  server:
+    image: mirror.gcr.io/library/eclipse-temurin:21-jre-noble
+    restart: unless-stopped
+    # The build from git runs as an unprivileged user on a read-only file system; only /tmp is writable.
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp
+    working_dir: /tmp
+    command: ["/app/bin/server"]
+    volumes:
+      - ./current:/app:ro
+    environment:
+      PORT: "8080"
+      DATABASE_URL: jdbc:postgresql://db:5432/chess
+      DATABASE_USER: chess
+      DATABASE_PASSWORD: ${DB_PASSWORD}
+      BOT_OPPONENTS: ${BOT_OPPONENTS:-on}
+      BOT_WAIT_SECONDS: ${BOT_WAIT_SECONDS:-8}
+      JAVA_OPTS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+    ports:
+      - "127.0.0.1:${CHESS_PORT:-18080}:8080"
+    mem_limit: 768m
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

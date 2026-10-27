@@ -1,0 +1,8 @@
+#!/bin/sh
+# Daily database dump for Chess Victory, kept 30 days (the term stated in the privacy policy).
+# Installed by setup.sh as /etc/cron.daily/chess-backup.
+set -e
+mkdir -p /var/backups/chess
+docker compose --project-name chess --project-directory /opt/chess -f /opt/chess/docker-compose.yml \
+    --env-file /opt/chess/.env exec -T db pg_dump -U chess chess | gzip >"/var/backups/chess/chess-$(date +%F).sql.gz"
+find /var/backups/chess -name 'chess-*.sql.gz' -mtime +30 -delete

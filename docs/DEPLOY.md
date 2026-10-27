@@ -1,5 +1,69 @@
 # Развёртывание игрового сервера
 
+Основной вариант — **VPS на Beget** (`159.194.210.112`, Ubuntu 24.04), где уже работают d-portret.ru и
+налог-сервис.рф: см. раздел «Beget» ниже. Раздел «Любой другой VPS» — запасной вариант на чистом сервере.
+
+## Beget: выкладка без SSH
+
+Сервер сам забирает новые сборки — так же устроена выкладка налог-сервис.рф на этом же VPS.
+
+```
+CI (GitHub Actions): тесты зелёные → :server:installDist → ветка deploy/chess-server-dist (только сборка)
+VPS: таймер systemd раз в 5 минут → chess-pull.sh → /opt/chess/current → перезапуск контейнера → /health
+```
+
+- **Безопасность.** Из git на сервер приходит только сборка (jar-файлы). Она работает в контейнере под
+  непривилегированным пользователем, без записи на диск, с доступом только к своей базе. Скрипт выкладки,
+  docker-compose и конфиг nginx ставятся один раз руками и из git не обновляются: коммит не может поменять
+  настройки самого сервера или задеть соседние сайты.
+- **Откат.** Если новая сборка не ответила на `/health` (или контейнер падает), скрипт за секунды возвращает
+  предыдущую и больше не пытается ставить эту сборку — до следующего коммита.
+- **Партии.** Перезапуск обрывает идущие партии (они в памяти), поэтому новая сборка ждёт, пока они
+  закончатся, но не дольше 30 минут.
+- **HTTPS.** Как только DNS домена начнёт указывать на сервер, скрипт сам выпустит сертификат (certbot) и
+  включит перенаправление на https.
+- **Статус** виден снаружи без входа на сервер: `https://chess.4vic.ru/deploy-status.json` — какая сборка
+  работает, результат последней выкладки, `/health` (версия, игроков онлайн, идущих партий), история событий.
+- Образы PostgreSQL и Java берутся с зеркала `mirror.gcr.io`: Docker Hub из России работает ненадёжно.
+
+### Разовая настройка (под root, около 10 минут)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nikolaylobanovrus/MobCheckMate/claude/busy-meitner-2gl6it/deploy/beget/setup.sh -o /tmp/chess-setup.sh
+less /tmp/chess-setup.sh     # посмотреть, что он сделает
+bash /tmp/chess-setup.sh
+```
+
+Скрипт ставит Docker из репозиториев Ubuntu (если его нет), создаёт `/opt/chess` со случайным паролем базы,
+добавляет сайт `chess.4vic.ru` в nginx (соседние сайты не трогает, перед перезагрузкой — `nginx -t`), выкладывает
+первую сборку, включает таймер, ежедневную копию базы (`/var/backups/chess`, 30 дней) и ротацию журнала.
+Повторный запуск безопасен.
+
+### DNS
+
+У домена 4vic.ru сейчас (27.10.2026) не отвечают DNS-серверы: публичные резолверы Google и Cloudflare
+возвращают ошибку «No Reachable Authority». Пока это так, `chess.4vic.ru` не откроется ни у кого. У регистратора
+домена нужно указать рабочие DNS-серверы (например, DNS Beget: `ns1.beget.com`, `ns2.beget.com`,
+`ns1.beget.pro`, `ns2.beget.pro`, если домен обслуживается там) и добавить A-запись `chess` → `159.194.210.112`.
+
+### Полезное на сервере
+
+```bash
+systemctl list-timers | grep chess                 # таймер жив
+tail -n 20 /var/log/chess-deploy.log               # журнал выкладок
+docker compose -p chess --project-directory /opt/chess logs --tail 100 server   # журнал игрового сервера
+cat /opt/chess/releases/*.failed                   # почему не поднялась сборка
+ln -sfn /opt/chess/releases/<сборка> /opt/chess/current && docker compose -p chess --project-directory /opt/chess up -d --force-recreate server   # откат руками
+```
+
+Настройки — в `/opt/chess/.env`: `BOT_OPPONENTS=on|off`, `BOT_WAIT_SECONDS`, `CHESS_PORT` (по умолчанию 18080,
+только для nginx на этом же сервере). После правки: `docker compose -p chess --project-directory /opt/chess up -d`.
+
+Ветку, из которой CI публикует сборку, задаёт `.github/workflows/ci.yml` (задача `publish-server`): сейчас это
+`claude/busy-meitner-2gl6it` и `main`.
+
+## Любой другой VPS
+
 Сервер — один Docker-контейнер с Ktor, рядом PostgreSQL и Caddy, который сам получает и продлевает HTTPS-сертификат.
 Всё описано в `deploy/docker-compose.yml`. Стек проверен целиком: сборка образа, старт с PostgreSQL, HTTPS и
 WebSocket через Caddy, партия настоящего клиента приложения с сохранением аккаунтов и партий в базе.
@@ -40,8 +104,7 @@ docker compose -f deploy/docker-compose.yml logs -f server
 ```
 
 Страницы для магазинов: `https://chess.4vic.ru/privacy.html`, `/terms.html`, `/delete-account.html`.
-Перед публикацией замените в них жёлтые заглушки `[ФИО …]`, `[ИНН …]`, `[адрес]` в
-`server/src/main/resources/site/` и заведите ящик support@4vic.ru.
+Реквизиты оператора (ООО «СИТИОПТОМ», ОГРН, ИНН, адрес) уже вписаны. Остаётся завести ящик support@4vic.ru.
 
 ## 4. Резервные копии
 
