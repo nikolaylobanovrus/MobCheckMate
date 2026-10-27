@@ -63,10 +63,18 @@ data class OnlineUiState(
     val opponentWantsRematch: Boolean = false,
     val premove: ChessMove? = null,
     val error: ErrorCode? = null,
+    /** Set for arena games: no abort or rematch, berserk instead. */
+    val tournamentId: String? = null,
+    val berserk: List<PlayerColor> = emptyList(),
 ) {
     val opponent: PlayerInfo? get() = if (myColor == PlayerColor.WHITE) black else white
     val myTurn: Boolean get() = phase == OnlinePhase.PLAYING && board.sideToMove == myColor
-    val canAbort: Boolean get() = phase == OnlinePhase.PLAYING && board.ply < 2
+    val canAbort: Boolean get() = phase == OnlinePhase.PLAYING && board.ply < 2 && tournamentId == null
+
+    /** Berserk is possible in an arena game before the user's own first move. */
+    val canBerserk: Boolean
+        get() = phase == OnlinePhase.PLAYING && tournamentId != null && clock?.berserkAllowed == true &&
+            myColor !in berserk && board.ply < (if (myColor == PlayerColor.WHITE) 1 else 2)
     val myMs: Long get() = if (myColor == PlayerColor.WHITE) whiteMs else blackMs
     val opponentMs: Long get() = if (myColor == PlayerColor.WHITE) blackMs else whiteMs
 }
@@ -74,11 +82,14 @@ data class OnlineUiState(
 /**
  * Online play: lobby, seeking and the game. The user's move is shown at once and confirmed by the server;
  * a rejected move is taken back, and a move lost in a disconnect is sent again after the reconnect.
+ *
+ * With [arena] set, the view model plays the user's tournament games instead of casual ones.
  */
 class OnlineViewModel(
     private val client: OnlineClient,
     private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
     tickerEnabled: Boolean = true,
+    private val arena: Boolean = false,
 ) : ViewModel() {
 
     private var game = ChessGame()
@@ -202,6 +213,11 @@ class OnlineViewModel(
         if (client.send(ClientMessage.Rematch(id))) state = state.copy(rematchRequested = true)
     }
 
+    fun berserk() {
+        val id = state.gameId ?: return
+        if (state.canBerserk) client.send(ClientMessage.Berserk(id))
+    }
+
     fun chat(phrase: QuickPhrase) {
         val id = state.gameId ?: return
         client.send(ClientMessage.Chat(id, phrase))
@@ -223,15 +239,22 @@ class OnlineViewModel(
 
     internal fun onMessage(message: ServerMessage) {
         when (message) {
-            is ServerMessage.Seeking -> {
+            is ServerMessage.Seeking -> if (!arena) {
                 if (seekStartedAt == null) seekStartedAt = nowMs()
                 state = state.copy(phase = OnlinePhase.SEEKING, seeking = message.clock)
             }
-            ServerMessage.SeekCancelled -> {
+            ServerMessage.SeekCancelled -> if (!arena) {
                 seekStartedAt = null
                 if (state.phase == OnlinePhase.SEEKING) state = state.copy(phase = OnlinePhase.LOBBY, seeking = null)
             }
-            is ServerMessage.Game -> applySnapshot(message.game)
+            is ServerMessage.Game -> if ((message.game.tournamentId != null) == arena) applySnapshot(message.game)
+            is ServerMessage.Berserked -> if (message.gameId == state.gameId) {
+                baseWhite = message.whiteMs
+                baseBlack = message.blackMs
+                syncedAt = nowMs()
+                state = state.copy(berserk = (state.berserk + message.by).distinct())
+                tick()
+            }
             is ServerMessage.Moved -> if (message.gameId == state.gameId) onMoved(message)
             is ServerMessage.Ended -> if (message.gameId == state.gameId) onEnded(message)
             is ServerMessage.DrawOffered -> if (message.gameId == state.gameId) {
@@ -251,7 +274,9 @@ class OnlineViewModel(
                 state = state.copy(chat = (state.chat + ChatLine(message.by == state.myColor, message.phrase)).takeLast(4))
             }
             is ServerMessage.Error -> onError(message)
-            is ServerMessage.Welcome, is ServerMessage.Pong, ServerMessage.AccountDeleted -> Unit
+            is ServerMessage.Welcome, is ServerMessage.Pong, ServerMessage.AccountDeleted,
+            is ServerMessage.Tournaments, is ServerMessage.Tournament,
+            -> Unit
         }
     }
 
@@ -288,6 +313,8 @@ class OnlineViewModel(
             rematchRequested = if (newGame) false else state.rematchRequested,
             opponentWantsRematch = if (newGame) false else state.opponentWantsRematch,
             error = null,
+            tournamentId = s.tournamentId,
+            berserk = s.berserk,
         )
         // A move lost in a disconnect: the server has not seen it, and it is still our turn at that ply.
         val lost = pendingMove
@@ -353,6 +380,7 @@ class OnlineViewModel(
     }
 
     private fun onError(error: ServerMessage.Error) {
+        if (error.code == ErrorCode.NO_SUCH_TOURNAMENT) return // for the tournament screen
         val pending = pendingMove
         if (pending != null && error.code in setOf(ErrorCode.ILLEGAL_MOVE, ErrorCode.NOT_YOUR_TURN, ErrorCode.BAD_REQUEST)) {
             if (game.moves.size == pending.ply + 1 && game.moves.last().uci == pending.uci) game.undo()

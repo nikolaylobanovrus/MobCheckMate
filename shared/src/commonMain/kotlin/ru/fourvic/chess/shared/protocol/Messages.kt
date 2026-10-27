@@ -32,6 +32,18 @@ data class Clock(val initialSeconds: Int, val incrementSeconds: Int) {
 
     val label: String get() = "${initialSeconds / 60}+$incrementSeconds"
 
+    /**
+     * Berserk (arenas only) halves the player's own clock and removes the increment. Not offered without base
+     * time, or when the increment in seconds is more than twice the base time in minutes.
+     */
+    val berserkAllowed: Boolean get() = initialSeconds > 0 && incrementSeconds * 60 <= 2 * initialSeconds
+
+    /** The clock of a player who went berserk. */
+    fun berserked(): Clock {
+        check(berserkAllowed) { "Berserk is not allowed for $label" }
+        return Clock(initialSeconds / 2, 0)
+    }
+
     companion object {
         /** Time controls offered in the lobby. */
         val LOBBY = listOf(
@@ -60,6 +72,9 @@ enum class GameResult { WHITE_WON, BLACK_WON, DRAW, ABORTED }
 enum class EndReason {
     CHECKMATE, RESIGNATION, TIMEOUT, STALEMATE, REPETITION, INSUFFICIENT_MATERIAL, FIFTY_MOVES,
     AGREEMENT, ABANDONED, ABORTED, TIMEOUT_VS_INSUFFICIENT_MATERIAL,
+
+    /** Tournament game where a player did not make the first move in time: that player loses, ratings stay. */
+    NO_START,
 }
 
 /** Short phrases instead of free chat: no moderation needed and every phrase is localised on the device. */
@@ -88,10 +103,45 @@ data class GameSnapshot(
     val reason: EndReason? = null,
     val drawOfferBy: PlayerColor? = null,
     val tournamentId: String? = null,
+    /** Players who went berserk in this (tournament) game. */
+    val berserk: List<PlayerColor> = emptyList(),
 )
 
 @Serializable
 data class RatingInfo(val speed: Speed, val rating: Int, val games: Int, val provisional: Boolean)
+
+@Serializable
+enum class TournamentStatus { CREATED, STARTED, FINISHED }
+
+@Serializable
+data class TournamentInfo(
+    /** For private arenas the id is also the code players type to join. */
+    val id: String,
+    val name: String,
+    val clock: Clock,
+    val minutes: Int,
+    val status: TournamentStatus,
+    /** Time until the start while CREATED, until the end while STARTED, as of when the server sent it. */
+    val msLeft: Long,
+    val players: Int,
+    val rated: Boolean,
+    val private: Boolean = false,
+    /** Key of a scheduled arena (hourly_bullet, hourly_blitz, daily_blitz, daily_rapid) for a localised name. */
+    val schedule: String? = null,
+    val winner: String? = null,
+)
+
+/** One line of an arena table. [sheet] holds the points of the latest games, oldest first. */
+@Serializable
+data class Standing(
+    val rank: Int,
+    val player: PlayerInfo,
+    val score: Int,
+    val games: Int,
+    val fire: Boolean,
+    val paused: Boolean,
+    val sheet: List<Int> = emptyList(),
+)
 
 @Serializable
 sealed interface ClientMessage {
@@ -153,6 +203,45 @@ sealed interface ClientMessage {
     @Serializable
     @SerialName("rename")
     data class Rename(val name: String) : ClientMessage
+
+    /** Before the own first move in an arena game: half the time, no increment, a bonus point for a win. */
+    @Serializable
+    @SerialName("berserk")
+    data class Berserk(val gameId: String) : ClientMessage
+
+    /** Tournament commands, handled by the arena manager. */
+    @Serializable
+    sealed interface TournamentCommand : ClientMessage
+
+    @Serializable
+    @SerialName("tournament_list")
+    data object ListTournaments : TournamentCommand
+
+    /** Sends updates of one tournament from now on; null stops them. */
+    @Serializable
+    @SerialName("tournament_watch")
+    data class WatchTournament(val id: String?) : TournamentCommand
+
+    /** Joins, or returns after a pause. Private arenas are joined by their code. */
+    @Serializable
+    @SerialName("tournament_join")
+    data class JoinTournament(val id: String) : TournamentCommand
+
+    /** Leaves the pairing pool; the points stay. */
+    @Serializable
+    @SerialName("tournament_pause")
+    data class PauseTournament(val id: String) : TournamentCommand
+
+    /** Creates a private arena; the creator joins it and gets its code in the reply. */
+    @Serializable
+    @SerialName("tournament_create")
+    data class CreateTournament(
+        val name: String,
+        val clock: Clock,
+        val minutes: Int,
+        val startsInMinutes: Int = 2,
+        val rated: Boolean = true,
+    ) : TournamentCommand
 }
 
 @Serializable
@@ -220,10 +309,23 @@ sealed interface ServerMessage {
     @Serializable
     @SerialName("error")
     data class Error(val code: ErrorCode, val message: String) : ServerMessage
+
+    @Serializable
+    @SerialName("berserked")
+    data class Berserked(val gameId: String, val by: PlayerColor, val whiteMs: Long, val blackMs: Long) : ServerMessage
+
+    @Serializable
+    @SerialName("tournaments")
+    data class Tournaments(val tournaments: List<TournamentInfo>) : ServerMessage
+
+    /** A tournament with the top of its table and the receiver's own line, if they joined. */
+    @Serializable
+    @SerialName("tournament")
+    data class Tournament(val info: TournamentInfo, val standings: List<Standing>, val me: Standing? = null) : ServerMessage
 }
 
 @Serializable
-enum class ErrorCode { BAD_REQUEST, ILLEGAL_MOVE, NOT_YOUR_TURN, NO_SUCH_GAME, UNAUTHORIZED, RATE_LIMITED, UNSUPPORTED_VERSION, NAME_TAKEN }
+enum class ErrorCode { BAD_REQUEST, ILLEGAL_MOVE, NOT_YOUR_TURN, NO_SUCH_GAME, UNAUTHORIZED, RATE_LIMITED, UNSUPPORTED_VERSION, NAME_TAKEN, NO_SUCH_TOURNAMENT }
 
 /** JSON settings shared by the client and the server. */
 val ProtocolJson: Json = Json {

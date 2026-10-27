@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -37,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -207,7 +209,7 @@ private fun Seeking(state: OnlineUiState, onCancel: () -> Unit, modifier: Modifi
 // --- Game -----------------------------------------------------------------------------------------------------
 
 @Composable
-private fun Game(state: OnlineUiState, viewModel: OnlineViewModel, modifier: Modifier) {
+internal fun Game(state: OnlineUiState, viewModel: OnlineViewModel, modifier: Modifier) {
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val opponentColor = if (state.myColor == PlayerColor.WHITE) PlayerColor.BLACK else PlayerColor.WHITE
     val running = state.phase == OnlinePhase.PLAYING && state.clockRunning
@@ -220,13 +222,19 @@ private fun Game(state: OnlineUiState, viewModel: OnlineViewModel, modifier: Mod
         )
     }
     val opponentBar = @Composable {
-        PlayerBar(state.opponent, state.opponentMs, active = running && state.board.sideToMove == opponentColor)
+        PlayerBar(
+            state.opponent,
+            state.opponentMs,
+            active = running && state.board.sideToMove == opponentColor,
+            berserk = opponentColor in state.berserk,
+        )
     }
     val myBar = @Composable {
         PlayerBar(
             if (state.myColor == PlayerColor.WHITE) state.white else state.black,
             state.myMs,
             active = running && state.board.sideToMove == state.myColor,
+            berserk = state.myColor in state.berserk,
         )
     }
     val panel = @Composable { GamePanel(state, viewModel) }
@@ -262,7 +270,7 @@ private fun Game(state: OnlineUiState, viewModel: OnlineViewModel, modifier: Mod
 }
 
 @Composable
-private fun PlayerBar(player: PlayerInfo?, ms: Long, active: Boolean) {
+private fun PlayerBar(player: PlayerInfo?, ms: Long, active: Boolean, berserk: Boolean) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(
@@ -273,8 +281,13 @@ private fun PlayerBar(player: PlayerInfo?, ms: Long, active: Boolean) {
             )
             if (player != null) {
                 Text(
-                    "${player.rating}${if (player.provisional) "?" else ""}",
+                    buildString {
+                        append(player.rating)
+                        if (player.provisional) append('?')
+                        if (berserk) append(" · ").append(stringResource(R.string.arena_berserk_mark))
+                    },
                     style = MaterialTheme.typography.bodySmall,
+                    color = if (berserk) MaterialTheme.colorScheme.error else Color.Unspecified,
                 )
             }
         }
@@ -320,6 +333,12 @@ private fun GamePanel(state: OnlineUiState, viewModel: OnlineViewModel) {
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+                if (state.canBerserk) {
+                    Button(
+                        onClick = viewModel::berserk,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    ) { Text(stringResource(R.string.arena_berserk)) }
+                }
                 if (state.canAbort) {
                     OutlinedButton(onClick = { viewModel.abort() }) { Text(stringResource(R.string.online_abort)) }
                 } else {
@@ -375,6 +394,12 @@ private fun ResultCard(state: OnlineUiState, viewModel: OnlineViewModel) {
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                 )
+            }
+            if (state.tournamentId != null) {
+                // The arena pairs the next game by itself; the view switches to it when it starts.
+                Text(stringResource(R.string.arena_next_game_soon), style = MaterialTheme.typography.bodyMedium)
+                Button(onClick = viewModel::backToLobby) { Text(stringResource(R.string.arena_to_table)) }
+                return@Column
             }
             if (state.opponentWantsRematch && !state.rematchRequested) {
                 Text(stringResource(R.string.online_rematch_offered), style = MaterialTheme.typography.bodyMedium)
@@ -467,6 +492,7 @@ private fun reasonText(reason: EndReason, state: OnlineUiState): String {
             EndReason.ABANDONED -> if (iWon) R.string.reason_opponent_left else R.string.reason_you_left
             EndReason.ABORTED -> R.string.reason_aborted
             EndReason.TIMEOUT_VS_INSUFFICIENT_MATERIAL -> R.string.reason_timeout_vs_insufficient
+            EndReason.NO_START -> if (iWon) R.string.reason_opponent_no_start else R.string.reason_you_no_start
         },
     )
 }

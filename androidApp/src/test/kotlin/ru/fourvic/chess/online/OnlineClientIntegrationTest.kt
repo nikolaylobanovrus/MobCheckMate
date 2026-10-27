@@ -99,4 +99,30 @@ class OnlineClientIntegrationTest {
             scope.cancel()
         }
     }
+
+    @Test
+    fun serverListsScheduledArenasAndJoinsOne(): Unit = runBlocking {
+        val url = System.getProperty("onlineServer")
+        assumeTrue("Set -PonlineServer to run against a server", !url.isNullOrBlank())
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            withTimeout(20_000) {
+                val a = Player(scope, url)
+                a.client.start()
+                a.connected()
+                a.client.send(ClientMessage.ListTournaments)
+                val list = a.next<ServerMessage.Tournaments>().tournaments
+                assertTrue(list.any { it.schedule == "hourly_bullet" } && list.any { it.schedule == "hourly_blitz" })
+                val arena = list.first()
+                a.client.send(ClientMessage.JoinTournament(arena.id))
+                val state = a.next<ServerMessage.Tournament>()
+                assertEquals(arena.id, state.info.id)
+                assertNotNull(state.me)
+                a.client.send(ClientMessage.PauseTournament(arena.id))
+                assertTrue(a.next<ServerMessage.Tournament>().me!!.paused)
+            }
+        } finally {
+            scope.cancel()
+        }
+    }
 }

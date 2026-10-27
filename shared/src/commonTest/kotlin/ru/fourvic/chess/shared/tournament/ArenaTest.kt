@@ -1,5 +1,6 @@
 package ru.fourvic.chess.shared.tournament
 
+import ru.fourvic.chess.shared.protocol.Clock
 import ru.fourvic.chess.shared.tournament.ArenaOutcome.DRAW
 import ru.fourvic.chess.shared.tournament.ArenaOutcome.LOSS
 import ru.fourvic.chess.shared.tournament.ArenaOutcome.WIN
@@ -76,12 +77,21 @@ class ArenaTest {
 
     @Test
     fun berserkAvailability() {
-        assertTrue(TimeControl(180, 2).berserkAllowed)
-        assertTrue(TimeControl(60, 2).berserkAllowed)
-        assertFalse(TimeControl(60, 3).berserkAllowed)
-        assertFalse(TimeControl(0, 1).berserkAllowed)
-        assertEquals(TimeControl(90, 0), TimeControl(180, 2).berserked())
-        assertFailsWith<IllegalStateException> { TimeControl(0, 2).berserked() }
-        assertEquals("3+2", TimeControl(180, 2).toString())
+        assertTrue(Clock(180, 2).berserkAllowed)
+        assertTrue(Clock(60, 2).berserkAllowed)
+        assertFalse(Clock(60, 3).berserkAllowed)
+        assertFalse(Clock(0, 1).berserkAllowed)
+        assertEquals(Clock(90, 0), Clock(180, 2).berserked())
+        assertFailsWith<IllegalStateException> { Clock(0, 2).berserked() }
+        assertEquals("3+2", Clock(180, 2).label)
+    }
+
+    @Test
+    fun createdArenasMustFitThreeGames() {
+        assertTrue(ArenaRules.allows(Clock(180, 0), 20))
+        assertFalse(ArenaRules.allows(Clock(180, 0), 15), "shorter than the minimum")
+        assertFalse(ArenaRules.allows(Clock(600, 0), 30), "10+0 needs about 48 minutes for three games")
+        assertTrue(ArenaRules.allows(Clock(600, 0), 60))
+        assertFalse(ArenaRules.allows(Clock(60, 0), 721))
     }
 }

@@ -58,6 +58,7 @@ class GameServer(
     private val activeGame = ConcurrentHashMap<String, String>()
     private val seeks = LinkedHashMap<String, SeekEntry>()
     private val endListeners = CopyOnWriteArrayList<GameEndListener>()
+    private val deletionListeners = CopyOnWriteArrayList<(String) -> Unit>()
 
     private data class SeekEntry(val accountId: String, val clock: Clock, val rated: Boolean, val rating: Int, val since: Long)
 
@@ -73,6 +74,11 @@ class GameServer(
 
     fun addGameEndListener(listener: GameEndListener) {
         endListeners += listener
+    }
+
+    /** Called with the account id after an account has been deleted. */
+    fun addAccountDeletedListener(listener: (String) -> Unit) {
+        deletionListeners += listener
     }
 
     fun isOnline(accountId: String) = connections.containsKey(accountId)
@@ -119,6 +125,8 @@ class GameServer(
             is ClientMessage.DeclineDraw -> roomFor(id, message.gameId)?.declineDraw(id) ?: noGame(id, message.gameId)
             is ClientMessage.Rematch -> roomFor(id, message.gameId)?.rematch(id) ?: noGame(id, message.gameId)
             is ClientMessage.Chat -> roomFor(id, message.gameId)?.chat(id, message.phrase) ?: noGame(id, message.gameId)
+            is ClientMessage.Berserk -> roomFor(id, message.gameId)?.berserk(id) ?: noGame(id, message.gameId)
+            is ClientMessage.TournamentCommand -> null // handled by the arena manager
             is ClientMessage.Ping -> {
                 send(id, ServerMessage.Pong(message.clientTime, now()))
                 null
@@ -151,6 +159,7 @@ class GameServer(
         activeGameOf(accountId)?.resign(accountId)
         synchronized(seeks) { seeks.remove(accountId) }
         accounts.delete(accountId)
+        deletionListeners.forEach { it(accountId) }
         send(accountId, ServerMessage.AccountDeleted)
         connections.remove(accountId)?.close()
     }
@@ -233,7 +242,8 @@ class GameServer(
         activeGame.remove(room.white.id, room.id)
         activeGame.remove(room.black.id, room.id)
         var diffs: Pair<Int?, Int?> = null to null
-        if (room.rated && result != GameResult.ABORTED) diffs = updateRatings(room, result)
+        // A tournament game nobody started counts in the table but not for ratings.
+        if (room.rated && result != GameResult.ABORTED && reason != EndReason.NO_START) diffs = updateRatings(room, result)
         if (result != GameResult.ABORTED) {
             runCatching {
                 storage.saveGame(

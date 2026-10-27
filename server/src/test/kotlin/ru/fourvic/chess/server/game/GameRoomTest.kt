@@ -44,9 +44,10 @@ class GameRoomTest {
     private val black = PlayerInfo("b", "Black", 1500)
     private val settings = RoomSettings(firstMoveMs = 30_000, disconnectGraceMs = 30_000, lagCompensationMs = 100)
 
-    private fun TestScope.room(events: Events, clock: Clock = Clock(60, 2)) = GameRoom(
+    private fun TestScope.room(events: Events, clock: Clock = Clock(60, 2), tournamentId: String? = null) = GameRoom(
         id = "g1", white = white, black = black, clock = clock, rated = true,
         scope = backgroundScope, now = { testScheduler.currentTime }, events = events, settings = settings,
+        tournamentId = tournamentId,
     )
 
     private fun GameRoom.play(vararg moves: String) = moves.forEachIndexed { _, uci ->
@@ -202,5 +203,39 @@ class GameRoomTest {
         advanceTimeBy(1_600)
         assertNull(room.chat("w", QuickPhrase.HELLO))
         assertEquals(2, events.to<ServerMessage.Chat>("b").size)
+    }
+
+    @Test
+    fun tournamentGamesCannotBeAbortedAndNotStartingLoses() = runTest {
+        val events = Events()
+        val room = room(events, tournamentId = "arena")
+        assertEquals(ErrorCode.BAD_REQUEST, room.abort("w")?.code)
+        room.play("e2e4")
+        advanceTimeBy(30_001)
+        runCurrent()
+        assertEquals(GameResult.WHITE_WON to EndReason.NO_START, events.ended)
+        assertEquals(ErrorCode.BAD_REQUEST, room.rematch("w")?.code, "the arena pairs the next game itself")
+    }
+
+    @Test
+    fun berserkHalvesTheClockAndDropsTheIncrement() = runTest {
+        val events = Events()
+        assertEquals(ErrorCode.BAD_REQUEST, room(events).berserk("w")?.code, "not outside tournaments")
+
+        val room = room(events, Clock(180, 2), tournamentId = "arena")
+        assertNull(room.berserk("w"))
+        assertEquals(90_000, room.snapshot().whiteMs)
+        assertEquals(listOf(PlayerColor.WHITE), room.snapshot().berserk)
+        room.play("e2e4")
+        assertEquals(ErrorCode.BAD_REQUEST, room.berserk("w")?.code, "too late after the own first move")
+        assertNull(room.berserk("b"), "Black may still go berserk before replying")
+        room.play("e7e5")
+        advanceTimeBy(1_100)
+        room.play("g1f3")
+        assertEquals(89_000, room.snapshot().whiteMs, "no increment after berserk")
+        advanceTimeBy(1_100)
+        room.play("b8c6")
+        assertEquals(89_000, room.snapshot().blackMs)
+        assertEquals(2, events.to<ServerMessage.Berserked>("w").size)
     }
 }

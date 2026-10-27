@@ -32,6 +32,8 @@ import ru.fourvic.chess.server.game.RoomSettings
 import ru.fourvic.chess.server.storage.InMemoryStorage
 import ru.fourvic.chess.server.storage.JdbcStorage
 import ru.fourvic.chess.server.storage.Storage
+import ru.fourvic.chess.server.tournament.ArenaManager
+import ru.fourvic.chess.server.tournament.ArenaSettings
 import ru.fourvic.chess.shared.protocol.ClientMessage
 import ru.fourvic.chess.shared.protocol.ErrorCode
 import ru.fourvic.chess.shared.protocol.PROTOCOL_VERSION
@@ -41,7 +43,7 @@ import ru.fourvic.chess.shared.protocol.decodeClientMessage
 import ru.fourvic.chess.shared.protocol.encode
 import kotlin.time.Duration.Companion.seconds
 
-const val SERVER_VERSION = "0.2.0"
+const val SERVER_VERSION = "0.3.0"
 
 /** Settings from environment variables; without DATABASE_URL everything is kept in memory. */
 data class ServerConfig(
@@ -50,6 +52,7 @@ data class ServerConfig(
     val databaseUser: String? = null,
     val databasePassword: String? = null,
     val rooms: RoomSettings = RoomSettings(),
+    val arenas: ArenaSettings = ArenaSettings(),
 ) {
     companion object {
         fun fromEnv(env: Map<String, String> = System.getenv()) = ServerConfig(
@@ -65,15 +68,20 @@ fun main() {
     val config = ServerConfig.fromEnv()
     val storage = config.databaseUrl?.let { JdbcStorage.connect(it, config.databaseUser, config.databasePassword) }
         ?: InMemoryStorage().also { LoggerFactory.getLogger("main").warn("DATABASE_URL is not set: data is kept in memory") }
-    embeddedServer(Netty, port = config.port) { module(storage, config.rooms) }.start(wait = true)
+    embeddedServer(Netty, port = config.port) { module(storage, config.rooms, config.arenas) }.start(wait = true)
 }
 
 @Serializable
 data class Health(val status: String, val version: String, val protocol: Int)
 
-fun Application.module(storage: Storage = InMemoryStorage(), rooms: RoomSettings = RoomSettings()) {
+fun Application.module(
+    storage: Storage = InMemoryStorage(),
+    rooms: RoomSettings = RoomSettings(),
+    arenaSettings: ArenaSettings = ArenaSettings(),
+) {
     val accounts = AccountService(storage)
     val server = GameServer(storage, accounts, scope = this, roomSettings = rooms)
+    val arenas = ArenaManager(server, storage, scope = this, settings = arenaSettings)
     val log = LoggerFactory.getLogger("ws")
 
     install(ContentNegotiation) { json(ProtocolJson) }
@@ -135,7 +143,9 @@ fun Application.module(storage: Storage = InMemoryStorage(), rooms: RoomSettings
                         connection.send(ServerMessage.Error(ErrorCode.BAD_REQUEST, "Cannot parse message"))
                         continue
                     }
-                    runCatching { server.handle(account, message) }
+                    runCatching {
+                        if (message is ClientMessage.TournamentCommand) arenas.handle(account, message) else server.handle(account, message)
+                    }
                         .onFailure { log.error("Failed to handle {} from {}", message::class.simpleName, account.id, it) }
                 }
             } finally {

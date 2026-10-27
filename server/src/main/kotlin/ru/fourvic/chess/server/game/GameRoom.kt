@@ -65,6 +65,11 @@ class GameRoom(
     var endedAt: Long = 0
         private set
     private var drawOfferBy: PlayerColor? = null
+    private val increments = mutableMapOf(
+        PlayerColor.WHITE to clock.incrementSeconds * 1000L,
+        PlayerColor.BLACK to clock.incrementSeconds * 1000L,
+    )
+    private val berserkers = mutableSetOf<PlayerColor>()
     private val rematchOffers = mutableSetOf<PlayerColor>()
     private var timerJob: Job? = null
     private val claimJobs = mutableMapOf<PlayerColor, Pair<Job, Long>>()
@@ -78,6 +83,7 @@ class GameRoom(
     val moveList: List<String> get() = synchronized(this) { moves.toList() }
     val finalResult: GameResult? get() = synchronized(this) { result }
     val finalReason: EndReason? get() = synchronized(this) { reason }
+    val berserked: Set<PlayerColor> get() = synchronized(this) { berserkers.toSet() }
 
     fun colorOf(accountId: String): PlayerColor? = when (accountId) {
         white.id -> PlayerColor.WHITE
@@ -96,6 +102,7 @@ class GameRoom(
             clockRunning = result == null && moves.size >= 2,
             firstMoveMs = if (result == null && moves.size < 2) (turnStartedAt + settings.firstMoveMs - t).coerceAtLeast(0) else null,
             result = result, reason = reason, drawOfferBy = drawOfferBy, tournamentId = tournamentId,
+            berserk = PlayerColor.entries.filter { it in berserkers },
         )
     }
 
@@ -121,7 +128,7 @@ class GameRoom(
             }
         }
         if (!game.play(move)) return error(ErrorCode.ILLEGAL_MOVE, "Illegal move $uci")
-        if (clockRunning) setRemaining(color, left + clock.incrementSeconds * 1000L)
+        if (clockRunning) setRemaining(color, left + increments.getValue(color))
         moves += move.uci
         turnStartedAt = t
         if (drawOfferBy != null && drawOfferBy != color) drawOfferBy = null // moving declines the offer
@@ -149,6 +156,8 @@ class GameRoom(
     fun abort(accountId: String): ServerMessage.Error? = synchronized(this) {
         colorOf(accountId) ?: return error(ErrorCode.NO_SUCH_GAME, "Not your game")
         if (result != null) return error(ErrorCode.NO_SUCH_GAME, "The game is over")
+        // Otherwise players could dodge tournament opponents; not moving loses instead.
+        if (tournamentId != null) return error(ErrorCode.BAD_REQUEST, "Tournament games cannot be aborted")
         if (moves.size >= 2) return error(ErrorCode.BAD_REQUEST, "Too late to abort")
         end(GameResult.ABORTED, EndReason.ABORTED)
         null
@@ -182,11 +191,26 @@ class GameRoom(
         synchronized(this) {
             val color = colorOf(accountId) ?: return error(ErrorCode.NO_SUCH_GAME, "Not your game")
             if (result == null) return error(ErrorCode.BAD_REQUEST, "The game is still going")
+            if (tournamentId != null) return error(ErrorCode.BAD_REQUEST, "The tournament pairs the next game")
             if (!rematchOffers.add(color)) return null
             if (rematchOffers.size == 2) agreed = true else broadcast(ServerMessage.RematchOffered(id, color))
         }
         if (agreed) events.rematchAgreed(this)
         return null
+    }
+
+    /** Arena only, before the player's own first move: half the base time and no increment. */
+    fun berserk(accountId: String): ServerMessage.Error? = synchronized(this) {
+        val color = colorOf(accountId) ?: return error(ErrorCode.NO_SUCH_GAME, "Not your game")
+        if (result != null) return error(ErrorCode.NO_SUCH_GAME, "The game is over")
+        if (tournamentId == null || !clock.berserkAllowed) return error(ErrorCode.BAD_REQUEST, "Berserk is not allowed")
+        val ownMovesPlayed = if (color == PlayerColor.WHITE) moves.isNotEmpty() else moves.size >= 2
+        if (ownMovesPlayed) return error(ErrorCode.BAD_REQUEST, "Too late to go berserk")
+        if (!berserkers.add(color)) return null
+        setRemaining(color, clock.berserked().initialSeconds * 1000L)
+        increments[color] = 0
+        broadcast(ServerMessage.Berserked(id, color, whiteMs, blackMs))
+        null
     }
 
     fun chat(accountId: String, phrase: QuickPhrase): ServerMessage.Error? = synchronized(this) {
@@ -228,7 +252,11 @@ class GameRoom(
 
     private fun abandoned(color: PlayerColor): Unit = synchronized(this) {
         if (result != null || claimJobs.remove(color) == null) return
-        if (moves.size < 2) end(GameResult.ABORTED, EndReason.ABORTED) else end(winner(color.opposite()), EndReason.ABANDONED)
+        when {
+            moves.size >= 2 -> end(winner(color.opposite()), EndReason.ABANDONED)
+            tournamentId != null -> end(winner(color.opposite()), EndReason.NO_START)
+            else -> end(GameResult.ABORTED, EndReason.ABORTED)
+        }
     }
 
     private fun scheduleTimer() {
@@ -244,7 +272,12 @@ class GameRoom(
     private fun onTimer(generation: Int): Unit = synchronized(this) {
         if (result != null || moves.size != generation) return
         if (moves.size < 2) {
-            end(GameResult.ABORTED, EndReason.ABORTED)
+            // In a tournament the player who does not start loses; elsewhere the game is simply cancelled.
+            if (tournamentId != null) {
+                end(winner(game.sideToMove.opposite()), EndReason.NO_START)
+            } else {
+                end(GameResult.ABORTED, EndReason.ABORTED)
+            }
             return
         }
         val side = game.sideToMove

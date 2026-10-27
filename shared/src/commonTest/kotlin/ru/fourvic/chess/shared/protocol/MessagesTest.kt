@@ -41,4 +41,20 @@ class MessagesTest {
         assertEquals("3+2", Clock(180, 2).label)
         assertFailsWith<IllegalArgumentException> { Clock(0, 0) }
     }
+
+    @Test
+    fun tournamentMessagesRoundTrip() {
+        val create: ClientMessage = ClientMessage.CreateTournament("Клуб", Clock(180, 0), minutes = 30)
+        assertEquals(create, decodeClientMessage(create.encode()))
+        assertEquals(ClientMessage.ListTournaments, decodeClientMessage("""{"type":"tournament_list"}"""))
+        assertEquals(ClientMessage.JoinTournament("AB12CD"), decodeClientMessage("""{"type":"tournament_join","id":"AB12CD"}"""))
+
+        val info = TournamentInfo(
+            id = "hourly_bullet-1", name = "Hourly Bullet", clock = Clock(60, 0), minutes = 30,
+            status = TournamentStatus.STARTED, msLeft = 600_000, players = 2, rated = true, schedule = "hourly_bullet",
+        )
+        val me = Standing(1, PlayerInfo("a", "A", 1500), score = 6, games = 3, fire = true, paused = false, sheet = listOf(2, 0, 4))
+        val message: ServerMessage = ServerMessage.Tournament(info, listOf(me), me)
+        assertEquals(message, decodeServerMessage(message.encode()))
+    }
 }

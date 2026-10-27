@@ -1,30 +1,6 @@
 package ru.fourvic.chess.shared.tournament
 
-/** Time control in seconds, for example 3+2 is `TimeControl(180, 2)`. */
-data class TimeControl(val initialSeconds: Int, val incrementSeconds: Int) {
-    init {
-        require(initialSeconds >= 0 && incrementSeconds >= 0) { "Time control must not be negative" }
-        require(initialSeconds > 0 || incrementSeconds > 0) { "Time control must not be 0+0" }
-    }
-
-    /**
-     * Berserk halves the player's own clock. It is not offered without base time, or when the
-     * increment in seconds is more than twice the base time in minutes (the increment would dominate).
-     */
-    val berserkAllowed: Boolean
-        get() = initialSeconds > 0 && incrementSeconds * 60 <= 2 * initialSeconds
-
-    /** The clock of a player who went berserk: half of the base time and no increment. */
-    fun berserked(): TimeControl {
-        check(berserkAllowed) { "Berserk is not allowed for $this" }
-        return TimeControl(initialSeconds / 2, 0)
-    }
-
-    override fun toString(): String {
-        val minutes = if (initialSeconds % 60 == 0) "${initialSeconds / 60}" else "${initialSeconds / 60.0}"
-        return "$minutes+$incrementSeconds"
-    }
-}
+import ru.fourvic.chess.shared.protocol.Clock
 
 enum class ArenaOutcome { WIN, DRAW, LOSS }
 
@@ -116,4 +92,19 @@ object ArenaScoring {
     /** Replays a player's games in order and returns the final state. */
     fun replay(games: List<ArenaGame>): ArenaPlayerState =
         games.fold(ArenaPlayerState()) { state, game -> score(state, game).state }
+}
+
+/** Limits for arenas that players create (docs/TOURNAMENTS.md, section 3.5). */
+object ArenaRules {
+    const val MIN_MINUTES = 20
+    const val MAX_MINUTES = 720
+    const val MAX_PRIVATE_PLAYERS = 100
+    const val MIN_GAMES_PER_PLAYER = 3
+
+    /** Typical length of one game: both clocks mostly used up. */
+    fun estimatedGameSeconds(clock: Clock): Int = (clock.estimatedSeconds * 2 * 0.8).toInt()
+
+    /** The arena must last long enough for [MIN_GAMES_PER_PLAYER] games. */
+    fun allows(clock: Clock, minutes: Int): Boolean =
+        minutes in MIN_MINUTES..MAX_MINUTES && minutes * 60 >= MIN_GAMES_PER_PLAYER * estimatedGameSeconds(clock)
 }
