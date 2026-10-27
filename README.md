@@ -1,4 +1,4 @@
-# Chess Online (MobCheckMate)
+# Chess Victory (MobCheckMate)
 
 Мобильные онлайн-шахматы для Android: игра с людьми по сети, с компьютером, шахматные задачи и турниры.
 Ориентир по продукту — «Chess Online – Duel friends!» (com.hagstrom.henrik.chess), но с надёжным сетевым

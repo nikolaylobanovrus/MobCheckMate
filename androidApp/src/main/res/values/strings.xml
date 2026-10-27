@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Chess Online</string>
+    <string name="app_name">Chess Victory</string>
     <string name="white_to_move">White to move</string>
     <string name="black_to_move">Black to move</string>
     <string name="check">Check!</string>
@@ -199,7 +199,7 @@
     <string name="arena_finished_winner">Winner: %1$s</string>
     <string name="arena_code">Code: %1$s</string>
     <string name="arena_share">Invite</string>
-    <string name="arena_share_text">Join my chess tournament \"%1$s\" in Chess Online. Code: %2$s</string>
+    <string name="arena_share_text">Join my chess tournament \"%1$s\" in Chess Victory. Code: %2$s</string>
     <string name="arena_join">Join</string>
     <string name="arena_pause">Pause</string>
     <string name="arena_resume">Resume</string>

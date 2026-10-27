@@ -1,4 +1,4 @@
-# Chess Online — roadmap: от разработки до продвижения
+# Chess Victory — roadmap: от разработки до продвижения
 
 Состояние фактов: требования магазинов и законы — на 17.09.2026, турниры — на 26.10.2026.
 Документ не заменяет консультацию юриста и бухгалтера.
@@ -31,7 +31,7 @@ Google Play и RuStore.
 
 **Что нужно от владельца проекта:**
 1. ~~Выбрать идентификатор приложения~~ — `ru.fourvic.chess`.
-2. Выбрать своё название вместо «Chess Online» (совпадает с образцом), см. `docs/store/README.md`.
+2. ~~Выбрать своё название~~ — «Chess Victory».
 3. VPS в России и A-запись `chess.4vic.ru`, затем `docs/DEPLOY.md` (около часа).
 4. Реквизиты оператора в документах на сайте, ящик support@4vic.ru, уведомление в Роскомнадзор
    (pd.rkn.gov.ru) до начала обработки данных; документы стоит показать юристу.
@@ -296,7 +296,7 @@ production на новом Personal-аккаунте — 3–5 недель.
 
 ### 8.2. ASO
 
-- Название: `Chess Online: Play with Friends` и `Шахматы онлайн — с друзьями`.
+- Название: `Chess Victory: Online Chess` и `Chess Victory: шахматы онлайн`.
 - Краткое описание: «Play chess online with friends, join tournaments & solve daily puzzles!»
 - Ключевые слова: chess online, chess tournament, play chess with friends, chess vs computer, chess puzzles;
   шахматы онлайн, шахматный турнир, шахматы с друзьями, шахматные задачи.

@@ -1,4 +1,4 @@
-Chess Online uses the following open-source components and data.
+Chess Victory uses the following open-source components and data.
 
 kchesslib 1.0.5 — Apache License 2.0
   Kotlin Multiplatform port of chesslib. https://github.com/cvb941/kchesslib

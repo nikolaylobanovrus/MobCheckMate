@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Шахматы онлайн</string>
+    <string name="app_name">Chess Victory</string>
     <string name="white_to_move">Ход белых</string>
     <string name="black_to_move">Ход чёрных</string>
     <string name="check">Шах!</string>
@@ -203,7 +203,7 @@
     <string name="arena_finished_winner">Победитель: %1$s</string>
     <string name="arena_code">Код: %1$s</string>
     <string name="arena_share">Пригласить</string>
-    <string name="arena_share_text">Присоединяйтесь к шахматному турниру «%1$s» в Chess Online. Код: %2$s</string>
+    <string name="arena_share_text">Присоединяйтесь к шахматному турниру «%1$s» в Chess Victory. Код: %2$s</string>
     <string name="arena_join">Участвовать</string>
     <string name="arena_pause">Пауза</string>
     <string name="arena_resume">Продолжить</string>
