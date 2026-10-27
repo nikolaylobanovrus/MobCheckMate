@@ -1,6 +1,7 @@
 package ru.fourvic.chess.puzzles
 
 import android.content.Context
+import androidx.core.content.edit
 import ru.fourvic.chess.shared.puzzle.Puzzle
 import ru.fourvic.chess.shared.puzzle.PuzzleProgress
 import ru.fourvic.chess.shared.rating.Rating
@@ -43,23 +44,23 @@ class PrefsPuzzleProgressStore(context: Context) : PuzzleProgressStore {
     }
 
     override fun save(progress: PuzzleProgress) {
-        prefs.edit()
-            .putFloat("rating", progress.rating.rating.toFloat())
-            .putFloat("deviation", progress.rating.deviation.toFloat())
-            .putFloat("volatility", progress.rating.volatility.toFloat())
-            .putInt("solved", progress.solved)
-            .putInt("failed", progress.failed)
-            .putLong("last_daily_day", progress.lastDailyDay ?: -1)
-            .putInt("streak", progress.streak)
-            .putInt("best_streak", progress.bestStreak)
-            .apply()
+        prefs.edit {
+            putFloat("rating", progress.rating.rating.toFloat())
+            putFloat("deviation", progress.rating.deviation.toFloat())
+            putFloat("volatility", progress.rating.volatility.toFloat())
+            putInt("solved", progress.solved)
+            putInt("failed", progress.failed)
+            putLong("last_daily_day", progress.lastDailyDay ?: -1)
+            putInt("streak", progress.streak)
+            putInt("best_streak", progress.bestStreak)
+        }
     }
 
     override fun recentIds(): List<String> =
         prefs.getString("recent", "").orEmpty().split(',').filter { it.isNotEmpty() }
 
     override fun saveRecentIds(ids: List<String>) {
-        prefs.edit().putString("recent", ids.joinToString(",")).apply()
+        prefs.edit { putString("recent", ids.joinToString(",")) }
     }
 }
 

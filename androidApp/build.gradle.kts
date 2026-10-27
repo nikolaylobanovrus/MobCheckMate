@@ -33,7 +33,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // The emulator reaches the host machine at 10.0.2.2; run the server locally with ./gradlew :server:run.
+            buildConfigField("String", "SERVER_URL", "\"ws://10.0.2.2:8080/ws\"")
+        }
         release {
+            buildConfigField("String", "SERVER_URL", "\"wss://chess.4vic.ru/ws\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -63,6 +68,8 @@ android {
                 "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
                 "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
             )
+            // Address of a running server for OnlineClientIntegrationTest, e.g. -PonlineServer=ws://localhost:8080/ws.
+            providers.gradleProperty("onlineServer").orNull?.let { url -> it.systemProperty("onlineServer", url) }
         }
     }
 }
@@ -76,6 +83,7 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.ktor.client.okhttp)
 
     debugImplementation(libs.compose.ui.tooling)
 

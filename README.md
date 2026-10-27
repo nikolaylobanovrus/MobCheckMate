@@ -30,8 +30,13 @@
 - Бот на 5 уровнях (≈800–2000, откалиброван по Stockfish): собственный движок в общем модуле, работает на
   телефоне без интернета. Младшие уровни
   ошибаются по-человечески, пятый варьирует дебюты. Перед партией выбираются соперник, уровень и цвет.
-- Сервер на Ktor: проверка здоровья и WebSocket-песочница, которая проверяет каждый ход той же логикой, что и
-  клиент.
+- Игра онлайн: гостевой аккаунт без регистрации, подбор соперника по рейтингу для 9 контролей времени
+  (пуля, блиц, рапид), рейтинговые и товарищеские партии, рейтинг Glicko-2 отдельно для каждой скорости.
+  Часы ведёт сервер (учёт задержки сети, таймер первого хода), ход виден сразу и подтверждается сервером,
+  есть предход. Ничья, сдача, отмена до первых ходов, быстрые фразы вместо чата, реванш. При обрыве связи
+  приложение переподключается и продолжает партию; соперник видит обратный отсчёт до присуждения победы.
+  В настройках — смена имени и удаление аккаунта.
+- Сервер на Ktor: аккаунты, подбор пар, партии, рейтинги; хранение в PostgreSQL или в памяти для разработки.
 
 | Светлая тема | Тёмная тема | Мат, русский язык |
 |---|---|---|
@@ -40,6 +45,10 @@
 | Главное меню | Задачи | Игра с компьютером | Новая партия |
 |---|---|---|---|
 | ![](androidApp/src/test/screenshots/home_ru.png) | ![](androidApp/src/test/screenshots/puzzle_ru.png) | ![](androidApp/src/test/screenshots/game_vs_computer_ru.png) | ![](androidApp/src/test/screenshots/new_game_dialog_ru.png) |
+
+| Онлайн: лобби | Онлайн: партия | Онлайн: итог |
+|---|---|---|
+| ![](androidApp/src/test/screenshots/online_lobby_ru.png) | ![](androidApp/src/test/screenshots/online_game_ru.png) | ![](androidApp/src/test/screenshots/online_result_ru.png) |
 
 ## Структура репозитория
 
@@ -63,7 +72,7 @@ MobCheckMate/
 ```bash
 ./gradlew :shared:jvmTest            # тесты правил и турнирной логики
 ./gradlew :server:test               # тесты сервера
-./gradlew :server:run                # сервер на http://localhost:8080
+./gradlew :server:run                # сервер на http://localhost:8080 (эмулятор видит его как 10.0.2.2)
 ./gradlew :androidApp:assemblePlayDebug      # APK для Google Play
 ./gradlew :androidApp:assembleRustoreDebug   # APK для RuStore
 ./gradlew :androidApp:testPlayDebugUnitTest  # unit-тесты экрана
@@ -71,4 +80,6 @@ MobCheckMate/
 ./gradlew :androidApp:recordRoborazziPlayDebug   # перезаписать эталонные скриншоты
 ./gradlew :androidApp:bundlePlayRelease      # AAB для публикации (подпись настраивается отдельно)
 ./gradlew :shared:jvmTest -PengineMatch=10 --tests '*LevelMatchTest*'   # матчи уровней бота друг с другом
+./gradlew :androidApp:testPlayDebugUnitTest -PonlineServer=ws://localhost:8080/ws --tests '*OnlineClientIntegrationTest*'
+                                     # настоящий клиент против запущенного сервера
 ```

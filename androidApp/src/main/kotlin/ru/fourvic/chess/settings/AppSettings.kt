@@ -3,6 +3,7 @@ package ru.fourvic.chess.settings
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +16,8 @@ data class AppSettings(
     val showCoordinates: Boolean = true,
     val showLegalMoves: Boolean = true,
     val sound: Boolean = true,
+    /** Game server address for testing; empty means the address built into the app. */
+    val serverUrl: String = "",
 )
 
 /** Settings stored in SharedPreferences and exposed as a flow for Compose. */
@@ -26,12 +29,13 @@ class SettingsRepository(context: Context) {
 
     fun update(transform: (AppSettings) -> AppSettings) {
         val next = transform(state.value)
-        prefs.edit()
-            .putString(KEY_THEME, next.boardTheme.name)
-            .putBoolean(KEY_COORDINATES, next.showCoordinates)
-            .putBoolean(KEY_LEGAL_MOVES, next.showLegalMoves)
-            .putBoolean(KEY_SOUND, next.sound)
-            .apply()
+        prefs.edit {
+            putString(KEY_THEME, next.boardTheme.name)
+            putBoolean(KEY_COORDINATES, next.showCoordinates)
+            putBoolean(KEY_LEGAL_MOVES, next.showLegalMoves)
+            putBoolean(KEY_SOUND, next.sound)
+            putString(KEY_SERVER_URL, next.serverUrl)
+        }
         state.value = next
     }
 
@@ -44,6 +48,7 @@ class SettingsRepository(context: Context) {
             showCoordinates = prefs.getBoolean(KEY_COORDINATES, defaults.showCoordinates),
             showLegalMoves = prefs.getBoolean(KEY_LEGAL_MOVES, defaults.showLegalMoves),
             sound = prefs.getBoolean(KEY_SOUND, defaults.sound),
+            serverUrl = prefs.getString(KEY_SERVER_URL, null) ?: defaults.serverUrl,
         )
     }
 
@@ -52,6 +57,7 @@ class SettingsRepository(context: Context) {
         const val KEY_COORDINATES = "show_coordinates"
         const val KEY_LEGAL_MOVES = "show_legal_moves"
         const val KEY_SOUND = "sound"
+        const val KEY_SERVER_URL = "server_url"
     }
 }
 

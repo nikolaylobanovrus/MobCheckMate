@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -28,16 +29,16 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.random.Random
 import ru.fourvic.chess.BuildConfig
 import ru.fourvic.chess.R
 import ru.fourvic.chess.audio.MoveSounds
-import ru.fourvic.chess.ui.board.ChessBoard
-import ru.fourvic.chess.ui.common.ScreenScaffold
 import ru.fourvic.chess.shared.chess.GameStatus
 import ru.fourvic.chess.shared.chess.PlayerColor
 import ru.fourvic.chess.shared.chess.Promotion
 import ru.fourvic.chess.shared.engine.BotLevel
-import kotlin.random.Random
+import ru.fourvic.chess.ui.board.ChessBoard
+import ru.fourvic.chess.ui.common.ScreenScaffold
 
 @Composable
 fun GameScreen(
@@ -196,7 +197,7 @@ internal fun NewGameDialog(
 ) {
     val currentComputer = current as? Opponent.Computer
     var vsComputer by rememberSaveable { mutableStateOf(current !is Opponent.Friend) }
-    var levelNumber by rememberSaveable { mutableStateOf(currentComputer?.level?.number ?: 2) }
+    var levelNumber by rememberSaveable { mutableIntStateOf(currentComputer?.level?.number ?: 2) }
     var color by rememberSaveable {
         mutableStateOf(if (currentComputer?.humanColor == PlayerColor.BLACK) ColorChoice.BLACK else ColorChoice.WHITE)
     }
