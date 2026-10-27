@@ -66,6 +66,7 @@ import ru.fourvic.chess.shared.protocol.TournamentInfo
 import ru.fourvic.chess.shared.protocol.TournamentStatus
 import ru.fourvic.chess.shared.tournament.ArenaRules
 import ru.fourvic.chess.ui.common.ScreenScaffold
+import ru.fourvic.chess.ui.common.withFlag
 import ru.fourvic.chess.ui.game.PromotionDialog
 import ru.fourvic.chess.ui.game.soundFor
 import ru.fourvic.chess.ui.online.Game
@@ -376,7 +377,7 @@ private fun StandingRow(line: Standing, mine: Boolean) {
         Text("${line.rank}", modifier = Modifier.width(28.dp), style = MaterialTheme.typography.bodyMedium)
         Column(Modifier.weight(1f)) {
             Text(
-                line.player.name,
+                withFlag(line.player.name, line.player.country),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (mine) FontWeight.Bold else FontWeight.Normal,
                 maxLines = 1,

@@ -35,7 +35,7 @@ docker compose -f deploy/docker-compose.yml up -d --build
 Первая сборка занимает 5–10 минут. Проверка:
 
 ```bash
-curl https://chess.4vic.ru/health          # {"status":"ok","version":"0.3.0","protocol":1}
+curl https://chess.4vic.ru/health          # {"status":"ok","version":"0.4.0","protocol":1}
 docker compose -f deploy/docker-compose.yml logs -f server
 ```
 
@@ -90,3 +90,5 @@ DATABASE_URL=jdbc:postgresql://localhost:5432/chess DATABASE_USER=chess DATABASE
 | `DATABASE_URL` | — | JDBC-адрес PostgreSQL; без него данные хранятся в памяти |
 | `DATABASE_USER`, `DATABASE_PASSWORD` | — | Учётные данные базы |
 | `JAVA_OPTS` | в образе: `-XX:MaxRAMPercentage=75` | Параметры JVM |
+| `BOT_OPPONENTS` | `on` | Компьютерный соперник, если за время ожидания человек не нашёлся; `off` отключает |
+| `BOT_WAIT_SECONDS` | 8 | Сколько ждать человека (к этому добавляется случайно до 6 секунд) |

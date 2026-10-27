@@ -79,8 +79,8 @@ abstract class StoreAssetsTest(private val lang: String) {
 
     private val out get() = "../docs/store/$lang"
     private val ru get() = lang == "ru"
-    private val me get() = PlayerInfo("me", if (ru) "Николай" else "Nick", 1542)
-    private val rival get() = PlayerInfo("op", if (ru) "Магнус_88" else "Magnus_88", 1610)
+    private val me get() = PlayerInfo("me", if (ru) "Николай" else "Nick", 1542, country = if (ru) "RU" else "US")
+    private val rival get() = PlayerInfo("op", if (ru) "Дмитрий_К" else "Lukas_chess", 1610, country = if (ru) "KZ" else "DE")
     private val client get() = FakeOnlineClient(me, listOf(RatingInfo(Speed.BLITZ, 1542, 37, false)))
 
     @Before

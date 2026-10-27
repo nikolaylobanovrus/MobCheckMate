@@ -25,6 +25,8 @@ data class GameRecord(
     val startedAt: Long,
     val endedAt: Long,
     val tournamentId: String? = null,
+    /** Id of the computer side, if the opponent was a bot; kept apart in statistics and fair-play checks. */
+    val botId: String? = null,
 )
 
 /** Persistence for accounts, ratings and finished games. Implementations must be thread-safe. */

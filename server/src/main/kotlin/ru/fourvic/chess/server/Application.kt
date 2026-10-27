@@ -24,6 +24,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 import ru.fourvic.chess.server.accounts.AccountService
+import ru.fourvic.chess.server.bots.BotSettings
 import ru.fourvic.chess.server.game.ClientConnection
 import ru.fourvic.chess.server.game.GameServer
 import ru.fourvic.chess.server.game.RoomSettings
@@ -39,9 +40,10 @@ import ru.fourvic.chess.shared.protocol.ProtocolJson
 import ru.fourvic.chess.shared.protocol.ServerMessage
 import ru.fourvic.chess.shared.protocol.decodeClientMessage
 import ru.fourvic.chess.shared.protocol.encode
+import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
-const val SERVER_VERSION = "0.3.0"
+const val SERVER_VERSION = "0.4.0"
 
 /** Settings from environment variables; without DATABASE_URL everything is kept in memory. */
 data class ServerConfig(
@@ -51,6 +53,7 @@ data class ServerConfig(
     val databasePassword: String? = null,
     val rooms: RoomSettings = RoomSettings(),
     val arenas: ArenaSettings = ArenaSettings(),
+    val bots: BotSettings = BotSettings(),
 ) {
     companion object {
         fun fromEnv(env: Map<String, String> = System.getenv()) = ServerConfig(
@@ -58,6 +61,10 @@ data class ServerConfig(
             databaseUrl = env["DATABASE_URL"],
             databaseUser = env["DATABASE_USER"],
             databasePassword = env["DATABASE_PASSWORD"],
+            bots = BotSettings(
+                enabled = env["BOT_OPPONENTS"]?.lowercase() !in setOf("off", "false", "0"),
+                waitMs = (env["BOT_WAIT_SECONDS"]?.toLongOrNull() ?: 8) * 1000,
+            ),
         )
     }
 }
@@ -66,7 +73,7 @@ fun main() {
     val config = ServerConfig.fromEnv()
     val storage = config.databaseUrl?.let { JdbcStorage.connect(it, config.databaseUser, config.databasePassword) }
         ?: InMemoryStorage().also { LoggerFactory.getLogger("main").warn("DATABASE_URL is not set: data is kept in memory") }
-    embeddedServer(Netty, port = config.port) { module(storage, config.rooms, config.arenas) }.start(wait = true)
+    embeddedServer(Netty, port = config.port) { module(storage, config.rooms, config.arenas, config.bots) }.start(wait = true)
 }
 
 @Serializable
@@ -76,9 +83,10 @@ fun Application.module(
     storage: Storage = InMemoryStorage(),
     rooms: RoomSettings = RoomSettings(),
     arenaSettings: ArenaSettings = ArenaSettings(),
+    botSettings: BotSettings = BotSettings(),
 ) {
     val accounts = AccountService(storage)
-    val server = GameServer(storage, accounts, scope = this, roomSettings = rooms)
+    val server = GameServer(storage, accounts, scope = this, roomSettings = rooms, bots = botSettings)
     val arenas = ArenaManager(server, storage, scope = this, settings = arenaSettings)
     val log = LoggerFactory.getLogger("ws")
 
@@ -126,7 +134,7 @@ fun Application.module(
                 for (message in outbox) send(Frame.Text(message.encode()))
                 close(CloseReason(CloseReason.Codes.NORMAL, "Bye"))
             }
-            server.connected(account, session.token, connection)
+            server.connected(account, session.token, connection, countryOf(hello.locale))
             val limiter = RateLimiter(capacity = 40, refillPerSecond = 10.0)
             try {
                 for (frame in incoming) {
@@ -153,6 +161,10 @@ fun Application.module(
         }
     }
 }
+
+/** The region part of a language tag such as ru-RU, or null when the tag has none. */
+fun countryOf(languageTag: String?): String? =
+    languageTag?.let { Locale.forLanguageTag(it).country }?.takeIf { it.length == 2 && it.all(Char::isLetter) }?.uppercase()
 
 /** Token bucket: [capacity] messages at once, refilled at [refillPerSecond]. */
 class RateLimiter(private val capacity: Int, private val refillPerSecond: Double) {

@@ -59,6 +59,7 @@ import ru.fourvic.chess.shared.protocol.QuickPhrase
 import ru.fourvic.chess.shared.protocol.Speed
 import ru.fourvic.chess.ui.board.ChessBoard
 import ru.fourvic.chess.ui.common.ScreenScaffold
+import ru.fourvic.chess.ui.common.withFlag
 import ru.fourvic.chess.ui.game.PromotionDialog
 import ru.fourvic.chess.ui.game.soundFor
 
@@ -157,7 +158,7 @@ private fun ConnectionCard(state: OnlineUiState, onRetry: () -> Unit) {
             val me = state.me
             when {
                 state.connection == ConnectionState.CONNECTED && me != null -> {
-                    Text(me.name, style = MaterialTheme.typography.titleMedium)
+                    Text(withFlag(me.name, me.country), style = MaterialTheme.typography.titleMedium)
                     val names = Speed.entries.associateWith { speedName(it) }
                     Text(
                         state.ratings.joinToString("   ") { r ->
@@ -274,7 +275,7 @@ private fun PlayerBar(player: PlayerInfo?, ms: Long, active: Boolean, berserk: B
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(
-                player?.name ?: "",
+                player?.let { withFlag(it.name, it.country) } ?: "",
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -63,6 +63,8 @@ data class PlayerInfo(
     val name: String,
     val rating: Int,
     val provisional: Boolean = false,
+    /** ISO 3166 country code from the region in the device settings, shown as a flag; null when unknown. */
+    val country: String? = null,
 )
 
 @Serializable

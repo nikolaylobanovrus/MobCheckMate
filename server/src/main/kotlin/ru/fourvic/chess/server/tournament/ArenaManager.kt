@@ -400,7 +400,7 @@ class ArenaManager(
         val lines = arena.ranked().mapIndexed { index, e ->
             Standing(
                 rank = index + 1,
-                player = PlayerInfo(e.id, e.name, e.rating, e.provisional),
+                player = PlayerInfo(e.id, e.name, e.rating, e.provisional, games.countryOf(e.id)),
                 score = e.state.score,
                 games = e.state.games,
                 fire = e.state.onFire,

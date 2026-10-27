@@ -33,8 +33,8 @@ class OnlineScreenScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val me = PlayerInfo("me", "Николай", 1542)
-    private val opponent = PlayerInfo("op", "Магнус_88", 1610)
+    private val me = PlayerInfo("me", "Николай", 1542, country = "RU")
+    private val opponent = PlayerInfo("op", "Дмитрий_К", 1610, country = "KZ")
     private val ratings = listOf(
         RatingInfo(Speed.BULLET, 1500, 0, provisional = true),
         RatingInfo(Speed.BLITZ, 1542, 37, provisional = false),

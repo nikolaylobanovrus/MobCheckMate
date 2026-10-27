@@ -125,4 +125,33 @@ class OnlineClientIntegrationTest {
             scope.cancel()
         }
     }
+
+    /** Needs a server with a short bot wait: BOT_WAIT_SECONDS=2 ./gradlew :server:run */
+    @Test
+    fun aloneInTheLobbyAComputerOpponentPlays(): Unit = runBlocking {
+        val url = System.getProperty("onlineServer")
+        assumeTrue("Set -PonlineServer to run against a server", !url.isNullOrBlank())
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            withTimeout(40_000) {
+                val a = Player(scope, url)
+                a.client.start()
+                a.connected()
+                val me = assertNotNull(a.client.welcome.value).player.id
+                a.client.send(ClientMessage.Seek(Clock(180, 0), rated = false))
+                val game = a.next<ServerMessage.Game>().game
+                val bot = if (game.white.id == me) game.black else game.white
+                assertNotNull(bot.country)
+                if (game.white.id == me) a.client.send(ClientMessage.Move(game.gameId, "e2e4", 0))
+                // Skip our own move's confirmation: White's moves end on odd plies, Black's on even ones.
+                var botMove: ServerMessage.Moved
+                do botMove = a.next<ServerMessage.Moved>() while ((botMove.ply % 2 == 0) != (game.black.id == bot.id))
+                assertTrue(botMove.uci.length >= 4)
+                a.client.send(ClientMessage.Resign(game.gameId))
+                assertEquals(EndReason.RESIGNATION, a.next<ServerMessage.Ended>().reason)
+            }
+        } finally {
+            scope.cancel()
+        }
+    }
 }

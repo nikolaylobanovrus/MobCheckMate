@@ -119,13 +119,14 @@ class JdbcStorage(private val dataSource: DataSource) : Storage, AutoCloseable {
         connection { c ->
             c.prepareStatement(
                 """INSERT INTO games (id, white_id, black_id, initial_seconds, increment_seconds, rated, moves, result,
-                   reason, started_at, ended_at, tournament_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   reason, started_at, ended_at, tournament_id, bot_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             ).use {
                 it.setString(1, record.id); it.setString(2, record.whiteId); it.setString(3, record.blackId)
                 it.setInt(4, record.clock.initialSeconds); it.setInt(5, record.clock.incrementSeconds)
                 it.setBoolean(6, record.rated); it.setString(7, record.moves.joinToString(" "))
                 it.setString(8, record.result.name); it.setString(9, record.reason.name)
                 it.setLong(10, record.startedAt); it.setLong(11, record.endedAt); it.setString(12, record.tournamentId)
+                it.setString(13, record.botId)
                 it.executeUpdate()
             }
         }
@@ -134,7 +135,7 @@ class JdbcStorage(private val dataSource: DataSource) : Storage, AutoCloseable {
     override fun gamesOf(accountId: String, limit: Int): List<GameRecord> = connection { c ->
         c.prepareStatement(
             """SELECT id, white_id, black_id, initial_seconds, increment_seconds, rated, moves, result, reason,
-               started_at, ended_at, tournament_id FROM games WHERE white_id = ? OR black_id = ?
+               started_at, ended_at, tournament_id, bot_id FROM games WHERE white_id = ? OR black_id = ?
                ORDER BY ended_at DESC LIMIT ?""",
         ).use {
             it.setString(1, accountId); it.setString(2, accountId); it.setInt(3, limit)
@@ -148,6 +149,7 @@ class JdbcStorage(private val dataSource: DataSource) : Storage, AutoCloseable {
                                 moves = rs.getString(7).split(' ').filter { m -> m.isNotEmpty() },
                                 result = GameResult.valueOf(rs.getString(8)), reason = EndReason.valueOf(rs.getString(9)),
                                 startedAt = rs.getLong(10), endedAt = rs.getLong(11), tournamentId = rs.getString(12),
+                                botId = rs.getString(13),
                             ),
                         )
                     }
@@ -178,6 +180,8 @@ class JdbcStorage(private val dataSource: DataSource) : Storage, AutoCloseable {
                 initial_seconds INT NOT NULL, increment_seconds INT NOT NULL, rated BOOLEAN NOT NULL,
                 moves TEXT NOT NULL, result VARCHAR(16) NOT NULL, reason VARCHAR(40) NOT NULL,
                 started_at BIGINT NOT NULL, ended_at BIGINT NOT NULL, tournament_id VARCHAR(32))""",
+            // Added after the first schema; harmless when the column exists.
+            "ALTER TABLE games ADD COLUMN IF NOT EXISTS bot_id VARCHAR(32)",
             "CREATE INDEX IF NOT EXISTS games_white ON games (white_id)",
             "CREATE INDEX IF NOT EXISTS games_black ON games (black_id)",
         )

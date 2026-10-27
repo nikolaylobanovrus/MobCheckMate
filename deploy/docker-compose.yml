@@ -28,6 +28,8 @@ services:
       DATABASE_URL: jdbc:postgresql://db:5432/chess
       DATABASE_USER: chess
       DATABASE_PASSWORD: ${DB_PASSWORD}
+      BOT_OPPONENTS: ${BOT_OPPONENTS:-on}
+      BOT_WAIT_SECONDS: ${BOT_WAIT_SECONDS:-8}
     depends_on:
       db:
         condition: service_healthy

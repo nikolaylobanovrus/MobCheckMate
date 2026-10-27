@@ -53,6 +53,8 @@ class GameRoom(
     private val events: RoomEvents,
     private val settings: RoomSettings = RoomSettings(),
     val tournamentId: String? = null,
+    /** The side played by a computer opponent, if any; it gets no rating of its own. */
+    val bot: PlayerColor? = null,
 ) {
     val startedAt: Long = now()
     private val game = ChessGame()
