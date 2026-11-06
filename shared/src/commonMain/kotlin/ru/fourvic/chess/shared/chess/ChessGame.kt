@@ -18,6 +18,7 @@ class ChessGame(private val startFen: String = START_FEN) {
     private val board = Board().apply { loadFromFen(startFen) }
     private val playedMoves = mutableListOf<ChessMove>()
     private val captures = mutableListOf<Boolean>()
+    private val sans = mutableListOf<String>()
 
     /** Current position in FEN. */
     val fen: String get() = board.fen
@@ -28,6 +29,9 @@ class ChessGame(private val startFen: String = START_FEN) {
     val moves: List<ChessMove> get() = playedMoves.toList()
 
     val isCheck: Boolean get() = board.isKingAttacked
+
+    /** The moves in standard algebraic notation (e4, Nxf7+, O-O, e8=Q#), oldest first. */
+    val sanMoves: List<String> get() = sans.toList()
 
     /** True when the last move took a piece, including en passant. For sounds and animations. */
     val lastMoveWasCapture: Boolean get() = captures.lastOrNull() ?: false
@@ -54,10 +58,48 @@ class ChessGame(private val startFen: String = START_FEN) {
         val mover = board.getPiece(legal.from)
         val capture = board.getPiece(legal.to) != Piece.NONE ||
             (mover.pieceType == PieceType.PAWN && legal.from.file != legal.to.file)
+        val san = sanBefore(legal, mover, capture)
         board.doMove(legal)
         playedMoves += move
         captures += capture
+        sans += san + when {
+            board.isMated -> "#"
+            board.isKingAttacked -> "+"
+            else -> ""
+        }
         return true
+    }
+
+    /** SAN of [move] without the check sign, worked out in the position before it is played. */
+    private fun sanBefore(move: Move, mover: Piece, capture: Boolean): String {
+        val type = mover.pieceType
+        if (type == PieceType.KING && kotlin.math.abs(move.from.file.ordinal - move.to.file.ordinal) == 2) {
+            return if (move.to.file.ordinal > move.from.file.ordinal) "O-O" else "O-O-O"
+        }
+        val to = move.to.toName()
+        if (type == PieceType.PAWN) {
+            val from = if (capture) "${move.from.toName()[0]}x" else ""
+            val promotion = move.toChessMove().promotion?.let { "=" + it.uciSuffix.uppercaseChar() } ?: ""
+            return from + to + promotion
+        }
+        // Another piece of the same kind that can reach the same square needs the file, rank or both.
+        val rivals = board.legalMoves().filter {
+            it.to == move.to && it.from != move.from && board.getPiece(it.from) == mover
+        }
+        val disambiguation = when {
+            rivals.isEmpty() -> ""
+            rivals.none { it.from.file == move.from.file } -> move.from.toName().substring(0, 1)
+            rivals.none { it.from.rank == move.from.rank } -> move.from.toName().substring(1)
+            else -> move.from.toName()
+        }
+        val letter = when (type) {
+            PieceType.KNIGHT -> "N"
+            PieceType.BISHOP -> "B"
+            PieceType.ROOK -> "R"
+            PieceType.QUEEN -> "Q"
+            else -> "K"
+        }
+        return letter + disambiguation + (if (capture) "x" else "") + to
     }
 
     /**
@@ -90,6 +132,7 @@ class ChessGame(private val startFen: String = START_FEN) {
         board.undoMove()
         playedMoves.removeAt(playedMoves.lastIndex)
         captures.removeAt(captures.lastIndex)
+        sans.removeAt(sans.lastIndex)
         return true
     }
 

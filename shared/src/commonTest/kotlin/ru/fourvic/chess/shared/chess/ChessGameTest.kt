@@ -118,4 +118,35 @@ class ChessGameTest {
         assertNull(ChessMove.fromUci("e7e8k"))
         assertNull(ChessMove.fromUci("hello"))
     }
+
+    @Test
+    fun movesAreWrittenInAlgebraicNotation() {
+        val game = ChessGame()
+        game.playAll("e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "e1g1", "f8c5", "f3e5", "c6e5", "d2d4", "c5d4", "d1d4")
+        assertEquals(
+            listOf("e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "O-O", "Bc5", "Nxe5", "Nxe5", "d4", "Bxd4", "Qxd4"),
+            game.sanMoves,
+        )
+        game.undo()
+        assertEquals("Bxd4", game.sanMoves.last())
+    }
+
+    @Test
+    fun notationShowsChecksMatesPromotionsAndAmbiguity() {
+        val mate = ChessGame()
+        mate.playAll("f2f3", "e7e5", "g2g4", "d8h4")
+        assertEquals(listOf("f3", "e5", "g4", "Qh4#"), mate.sanMoves)
+
+        // Both rooks can reach d1: the file tells them apart; on one file, the rank does. Then a capture-promotion.
+        val endgame = ChessGame("2r1k3/1P6/8/8/8/8/4K3/R6R w - - 0 1")
+        endgame.playAll("a1d1", "e8f7", "b7c8q")
+        assertEquals(listOf("Rad1", "Kf7", "bxc8=Q"), endgame.sanMoves)
+        val sameFile = ChessGame("4k3/8/8/R7/8/8/8/R3K3 w - - 0 1")
+        sameFile.playAll("a5a3")
+        assertEquals(listOf("R5a3"), sameFile.sanMoves)
+
+        val castling = ChessGame("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1")
+        castling.playAll("e8c8")
+        assertEquals(listOf("O-O-O"), castling.sanMoves)
+    }
 }

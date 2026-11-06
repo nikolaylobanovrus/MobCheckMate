@@ -18,4 +18,13 @@ class SquareMappingTest {
         assertEquals("a8", squareAt(column = 7, row = 7, flipped = true))
         assertEquals("e7", squareAt(column = 3, row = 6, flipped = true))
     }
+
+    @Test
+    fun cellOfIsTheInverseOfSquareAt() {
+        for (flipped in listOf(false, true)) {
+            for (row in 0..7) for (column in 0..7) {
+                assertEquals(column to row, cellOf(squareAt(column, row, flipped), flipped))
+            }
+        }
+    }
 }

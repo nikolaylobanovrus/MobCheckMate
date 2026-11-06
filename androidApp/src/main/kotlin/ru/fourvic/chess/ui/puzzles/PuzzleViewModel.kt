@@ -43,6 +43,8 @@ data class PuzzleUiState(
     val streak: Int = 0,
     val dailySolvedToday: Boolean = false,
     val hintSquare: String? = null,
+    /** Today's puzzle as it is first shown, for the preview on the home screen. */
+    val dailyPreview: GameUiState? = null,
 ) {
     val finished: Boolean get() = phase == PuzzlePhase.SOLVED || phase == PuzzlePhase.REVEALED
 }
@@ -74,7 +76,9 @@ class PuzzleViewModel(
     init {
         viewModelScope.launch {
             val puzzles = withContext(ioDispatcher) { source.load() }
-            selector = PuzzleSelector(puzzles, random)
+            selector = PuzzleSelector(puzzles, random).also { chooser ->
+                chooser.daily(today())?.let { daily -> state = state.copy(dailyPreview = preview(PuzzleSession(daily))) }
+            }
             startPuzzle(PuzzleMode.TRAINING)
         }
     }
@@ -235,6 +239,16 @@ class PuzzleViewModel(
             streak = progress.currentStreak(today()),
             dailySolvedToday = progress.isDailySolved(today()),
             hintSquare = hint,
+        )
+    }
+
+    private fun preview(session: PuzzleSession): GameUiState {
+        val game = session.game
+        return GameUiState(
+            pieces = ChessGame.SQUARES_FROM_WHITE.mapNotNull { sq -> game.pieceAt(sq)?.let { sq to it } }.toMap(),
+            lastMove = game.moves.lastOrNull(),
+            sideToMove = game.sideToMove,
+            flipped = session.solverColor == PlayerColor.BLACK,
         )
     }
 

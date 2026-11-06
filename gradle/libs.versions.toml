@@ -5,6 +5,7 @@ kchesslib = "1.0.5"
 composeBom = "2026.09.00"
 activityCompose = "1.13.0"
 lifecycle = "2.10.0"
+appcompat = "1.7.1"
 ktor = "3.6.0"
 serialization = "1.12.0"
 logback = "1.5.38"
@@ -27,6 +28,7 @@ compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }

@@ -105,13 +105,25 @@ class OnlineViewModel(
     private var firstMoveDeadline: Long? = null
     private var claimDeadline: Long? = null
     private var seekStartedAt: Long? = null
+    /** A seek asked for before the connection was up (quick play from the home screen). */
+    private var queuedSeek: Clock? = null
 
     var state by mutableStateOf(OnlineUiState())
         private set
 
     init {
         client.start()
-        viewModelScope.launch { client.state.collect { state = state.copy(connection = it) } }
+        viewModelScope.launch {
+            client.state.collect {
+                state = state.copy(connection = it)
+                if (it == ConnectionState.CONNECTED) {
+                    queuedSeek?.let { clock ->
+                        queuedSeek = null
+                        client.send(ClientMessage.Seek(clock, state.rated))
+                    }
+                }
+            }
+        }
         viewModelScope.launch {
             client.welcome.collect { w ->
                 if (w != null) state = state.copy(me = w.player, ratings = w.ratings, registered = w.registered)
@@ -143,7 +155,20 @@ class OnlineViewModel(
         }
     }
 
+    /** Starts looking for a game at once, or as soon as the connection is up. */
+    fun quickSeek(clock: Clock) {
+        if (state.phase != OnlinePhase.LOBBY) return
+        if (state.connection == ConnectionState.CONNECTED) {
+            seek(clock)
+            return
+        }
+        queuedSeek = clock
+        seekStartedAt = nowMs()
+        state = state.copy(phase = OnlinePhase.SEEKING, seeking = clock, seekSeconds = 0, error = null)
+    }
+
     fun cancelSeek() {
+        queuedSeek = null
         client.send(ClientMessage.CancelSeek)
         seekStartedAt = null
         state = state.copy(phase = OnlinePhase.LOBBY, seeking = null)
@@ -441,6 +466,7 @@ class OnlineViewModel(
                 pendingPromotion = pendingPromotion,
                 ply = game.moves.size,
                 lastMoveWasCapture = game.lastMoveWasCapture,
+                san = game.sanMoves,
             ),
             premove = pre,
         )

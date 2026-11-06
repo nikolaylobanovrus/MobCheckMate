@@ -111,6 +111,8 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.viewmodel.compose)
+    // Per-app language (English, Russian, Chinese) on every Android version, and the light/dark choice.
+    implementation(libs.appcompat)
     implementation(libs.ktor.client.okhttp)
 
     debugImplementation(libs.compose.ui.tooling)

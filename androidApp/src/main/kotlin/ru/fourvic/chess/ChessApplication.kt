@@ -7,7 +7,9 @@ import kotlinx.coroutines.SupervisorJob
 import ru.fourvic.chess.online.OnlineClient
 import ru.fourvic.chess.online.PrefsTokenStore
 import ru.fourvic.chess.online.WebSocketOnlineClient
+import ru.fourvic.chess.settings.Languages
 import ru.fourvic.chess.settings.SettingsRepository
+import ru.fourvic.chess.settings.applyThemeMode
 
 /** Holds what lives as long as the process: settings and the single connection to the game server. */
 class ChessApplication : Application() {
@@ -18,6 +20,13 @@ class ChessApplication : Application() {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
             tokens = PrefsTokenStore(this),
             serverUrl = { settings.settings.value.serverUrl.ifBlank { BuildConfig.SERVER_URL } },
+            locale = Languages::serverLocaleTag,
         )
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Before the first activity, so that it starts in the right theme without being recreated.
+        applyThemeMode(settings.settings.value.themeMode)
     }
 }

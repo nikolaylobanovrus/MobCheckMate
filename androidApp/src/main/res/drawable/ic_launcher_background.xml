@@ -1,14 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher icon background: dark green with a faint chessboard. -->
+<!-- Launcher icon background: deep blue with a soft gold glow behind the knight. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="@color/launcher_background"
-        android:pathData="M0,0h108v108h-108z" />
-    <path
-        android:fillColor="@color/launcher_board"
-        android:pathData="M13.5,0h13.5v13.5h-13.5zM40.5,0h13.5v13.5h-13.5zM67.5,0h13.5v13.5h-13.5zM94.5,0h13.5v13.5h-13.5zM0,13.5h13.5v13.5h-13.5zM27,13.5h13.5v13.5h-13.5zM54,13.5h13.5v13.5h-13.5zM81,13.5h13.5v13.5h-13.5zM13.5,27h13.5v13.5h-13.5zM40.5,27h13.5v13.5h-13.5zM67.5,27h13.5v13.5h-13.5zM94.5,27h13.5v13.5h-13.5zM0,40.5h13.5v13.5h-13.5zM27,40.5h13.5v13.5h-13.5zM54,40.5h13.5v13.5h-13.5zM81,40.5h13.5v13.5h-13.5zM13.5,54h13.5v13.5h-13.5zM40.5,54h13.5v13.5h-13.5zM67.5,54h13.5v13.5h-13.5zM94.5,54h13.5v13.5h-13.5zM0,67.5h13.5v13.5h-13.5zM27,67.5h13.5v13.5h-13.5zM54,67.5h13.5v13.5h-13.5zM81,67.5h13.5v13.5h-13.5zM13.5,81h13.5v13.5h-13.5zM40.5,81h13.5v13.5h-13.5zM67.5,81h13.5v13.5h-13.5zM94.5,81h13.5v13.5h-13.5zM0,94.5h13.5v13.5h-13.5zM27,94.5h13.5v13.5h-13.5zM54,94.5h13.5v13.5h-13.5zM81,94.5h13.5v13.5h-13.5z" />
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:startColor="@color/launcher_background_end"
+                android:endColor="@color/launcher_background" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54,52m-46,0a46,46 0 1,1 92,0a46,46 0 1,1 -92,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="50"
+                android:gradientRadius="46"
+                android:startColor="#4DF5C04E"
+                android:endColor="#00F5C04E" />
+        </aapt:attr>
+    </path>
 </vector>

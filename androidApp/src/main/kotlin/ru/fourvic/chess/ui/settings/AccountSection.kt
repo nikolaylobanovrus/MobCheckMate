@@ -2,21 +2,17 @@ package ru.fourvic.chess.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +35,13 @@ import ru.fourvic.chess.BuildConfig
 import ru.fourvic.chess.R
 import ru.fourvic.chess.online.ConnectionState
 import ru.fourvic.chess.settings.AppSettings
+import ru.fourvic.chess.ui.common.AppIcon
+import ru.fourvic.chess.ui.common.InfoBanner
+import ru.fourvic.chess.ui.common.PrimaryButton
+import ru.fourvic.chess.ui.common.SecondaryButton
+import ru.fourvic.chess.ui.common.SectionTitle
+import ru.fourvic.chess.ui.common.SurfaceCard
+import ru.fourvic.chess.ui.common.Tone
 
 private enum class AccountDialog { SAVE, SIGN_IN, CHANGE_PASSWORD, RENAME, SIGN_OUT, DELETE }
 
@@ -62,56 +65,75 @@ fun AccountSection(
         dialog = d
     }
 
-    HorizontalDivider()
-    Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleSmall)
+    SectionTitle(stringResource(R.string.settings_account))
     val me = state.me
-    when {
-        state.deleted -> Text(stringResource(R.string.settings_account_deleted), style = MaterialTheme.typography.bodyMedium)
-        state.connection != ConnectionState.CONNECTED || me == null -> {
-            if (state.pending == AccountRequest.SIGN_IN) {
-                Pending()
-            } else if (state.connection == ConnectionState.REPLACED) {
-                Text(stringResource(R.string.online_replaced), style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = viewModel::retry) { Text(stringResource(R.string.online_play_here)) }
-            } else {
-                Text(stringResource(R.string.settings_account_offline), style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = viewModel::retry) { Text(stringResource(R.string.online_retry)) }
-            }
-        }
-        else -> {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(me.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Badge(state.registered)
-            }
-            Text(
-                stringResource(if (state.registered) R.string.account_saved_hint else R.string.account_guest_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            state.done?.let { Text(stringResource(doneText(it)), color = MaterialTheme.colorScheme.primary) }
-            if (dialog == null) state.error?.let { Text(stringResource(errorText(it)), color = MaterialTheme.colorScheme.error) }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (state.registered) {
-                    OutlinedButton(onClick = { open(AccountDialog.CHANGE_PASSWORD) }) { Text(stringResource(R.string.account_change_password)) }
-                    OutlinedButton(onClick = { open(AccountDialog.SIGN_OUT) }) { Text(stringResource(R.string.account_sign_out)) }
+    SurfaceCard(contentPadding = PaddingValues(16.dp)) {
+        when {
+            state.deleted -> Text(stringResource(R.string.settings_account_deleted), style = MaterialTheme.typography.bodyMedium)
+            state.connection != ConnectionState.CONNECTED || me == null -> {
+                if (state.pending == AccountRequest.SIGN_IN) {
+                    Pending()
                 } else {
-                    Button(onClick = { open(AccountDialog.SAVE) }) { Text(stringResource(R.string.account_save)) }
-                    OutlinedButton(onClick = { open(AccountDialog.SIGN_IN) }) { Text(stringResource(R.string.account_sign_in)) }
+                    val replaced = state.connection == ConnectionState.REPLACED
+                    Text(
+                        stringResource(if (replaced) R.string.online_replaced else R.string.settings_account_offline),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    SecondaryButton(
+                        stringResource(if (replaced) R.string.online_play_here else R.string.online_retry),
+                        viewModel::retry,
+                        icon = if (replaced) R.drawable.ic_devices else R.drawable.ic_refresh,
+                    )
                 }
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { open(AccountDialog.RENAME) }) { Text(stringResource(R.string.settings_rename)) }
-                TextButton(onClick = { open(AccountDialog.DELETE) }) {
-                    Text(stringResource(R.string.settings_delete_account), color = MaterialTheme.colorScheme.error)
+            else -> {
+                Text(
+                    stringResource(if (state.registered) R.string.account_saved_hint else R.string.account_guest_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                state.done?.let {
+                    Spacer(Modifier.height(8.dp))
+                    InfoBanner(stringResource(doneText(it)), icon = R.drawable.ic_check, tone = Tone.SUCCESS)
                 }
+                if (dialog == null) {
+                    state.error?.let {
+                        Spacer(Modifier.height(8.dp))
+                        InfoBanner(stringResource(errorText(it)), icon = R.drawable.ic_info, tone = Tone.DANGER)
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                if (!state.registered) {
+                    PrimaryButton(stringResource(R.string.account_save), { open(AccountDialog.SAVE) }, Modifier.fillMaxWidth(), icon = R.drawable.ic_person_add)
+                    Spacer(Modifier.height(8.dp))
+                    SecondaryButton(stringResource(R.string.account_sign_in), { open(AccountDialog.SIGN_IN) }, Modifier.fillMaxWidth(), icon = R.drawable.ic_login)
+                    Spacer(Modifier.height(6.dp))
+                }
+                SettingRow(R.drawable.ic_edit, stringResource(R.string.settings_rename), onClick = { open(AccountDialog.RENAME) }) {
+                    AppIcon(R.drawable.ic_chevron_right, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (state.registered) {
+                    SettingRow(R.drawable.ic_key, stringResource(R.string.account_change_password), onClick = { open(AccountDialog.CHANGE_PASSWORD) }) {
+                        AppIcon(R.drawable.ic_chevron_right, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    SettingRow(R.drawable.ic_logout, stringResource(R.string.account_sign_out), onClick = { open(AccountDialog.SIGN_OUT) })
+                }
+                SettingRow(
+                    R.drawable.ic_delete,
+                    stringResource(R.string.settings_delete_account),
+                    onClick = { open(AccountDialog.DELETE) },
+                    tint = MaterialTheme.colorScheme.error,
+                )
             }
         }
-    }
 
-    if (showServerAddress) {
-        ServerAddress(settings.serverUrl) { url ->
-            onChange { it.copy(serverUrl = url) }
-            viewModel.reconnect()
+        if (showServerAddress) {
+            Spacer(Modifier.height(8.dp))
+            ServerAddress(settings.serverUrl) { url ->
+                onChange { it.copy(serverUrl = url) }
+                viewModel.reconnect()
+            }
         }
     }
 
@@ -170,23 +192,6 @@ private fun errorText(error: AccountError) = when (error) {
 
 private fun nameValid(name: String) = AccountViewModel.NAME.matches(name.trim())
 private fun passwordValid(password: String) = password.length in AccountViewModel.MIN_PASSWORD..AccountViewModel.MAX_PASSWORD
-
-/** "Guest" or "Saved" next to the name. */
-@Composable
-private fun Badge(registered: Boolean) {
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (registered) colors.secondaryContainer else colors.surfaceVariant,
-        contentColor = if (registered) colors.onSecondaryContainer else colors.onSurfaceVariant,
-    ) {
-        Text(
-            stringResource(if (registered) R.string.account_saved_badge else R.string.account_guest_badge),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelLarge,
-        )
-    }
-}
 
 @Composable
 private fun Pending() {

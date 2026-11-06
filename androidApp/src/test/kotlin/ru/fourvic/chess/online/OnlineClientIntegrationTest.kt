@@ -37,7 +37,7 @@ class OnlineClientIntegrationTest {
 
     private class Player(scope: CoroutineScope, url: String) {
         val tokens = MemoryTokenStore()
-        val client = WebSocketOnlineClient(scope, tokens) { url }
+        val client = WebSocketOnlineClient(scope, tokens, serverUrl = { url })
         val inbox = Channel<ServerMessage>(Channel.UNLIMITED)
 
         init {

@@ -28,14 +28,14 @@ import ru.fourvic.chess.ui.theme.ChessOnlineTheme
 /** Screenshots of online play in Russian. See GameScreenScreenshotTest for commands. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [36], qualifiers = "ru-w411dp-h891dp-xxhdpi")
+@Config(sdk = [36], qualifiers = "w411dp-h891dp-xxhdpi")
 class OnlineScreenScreenshotTest {
 
     @get:Rule
     val compose = createComposeRule()
 
-    private val me = PlayerInfo("me", "Николай", 1542, country = "RU")
-    private val opponent = PlayerInfo("op", "Дмитрий_К", 1610, country = "KZ")
+    private val me = PlayerInfo("me", "Nick", 1542, country = "US")
+    private val opponent = PlayerInfo("op", "Lukas_chess", 1610, country = "DE")
     private val ratings = listOf(
         RatingInfo(Speed.BULLET, 1500, 0, provisional = true),
         RatingInfo(Speed.BLITZ, 1542, 37, provisional = false),
@@ -49,8 +49,8 @@ class OnlineScreenScreenshotTest {
     @Test
     fun lobby() {
         val vm = viewModel()
-        compose.setContent { ChessOnlineTheme(darkTheme = false) { OnlineScreen(vm, onBack = {}) } }
-        compose.onRoot().captureRoboImage("src/test/screenshots/online_lobby_ru.png")
+        compose.setContent { ChessOnlineTheme(darkTheme = true) { OnlineScreen(vm, onBack = {}) } }
+        compose.onRoot().captureRoboImage("src/test/screenshots/online_lobby.png")
     }
 
     /** The account has been opened on another device. */
@@ -59,8 +59,8 @@ class OnlineScreenScreenshotTest {
         val client = FakeOnlineClient(me, ratings, registered = true)
         client.state.value = ConnectionState.REPLACED
         val vm = OnlineViewModel(client, nowMs = { now }, tickerEnabled = false)
-        compose.setContent { ChessOnlineTheme(darkTheme = false) { OnlineScreen(vm, onBack = {}) } }
-        compose.onRoot().captureRoboImage("src/test/screenshots/online_replaced_ru.png")
+        compose.setContent { ChessOnlineTheme(darkTheme = true) { OnlineScreen(vm, onBack = {}) } }
+        compose.onRoot().captureRoboImage("src/test/screenshots/online_replaced.png")
     }
 
     @Test
@@ -78,8 +78,8 @@ class OnlineScreenScreenshotTest {
         vm.onMessage(ServerMessage.Chat("g1", PlayerColor.BLACK, QuickPhrase.GOOD_LUCK))
         vm.onMessage(ServerMessage.DrawOffered("g1", PlayerColor.BLACK))
         vm.onSquareTapped("f1")
-        compose.setContent { ChessOnlineTheme(darkTheme = false) { OnlineScreen(vm, onBack = {}) } }
-        compose.onRoot().captureRoboImage("src/test/screenshots/online_game_ru.png")
+        compose.setContent { ChessOnlineTheme(darkTheme = true) { OnlineScreen(vm, onBack = {}) } }
+        compose.onRoot().captureRoboImage("src/test/screenshots/online_game.png")
     }
 
     @Test
@@ -95,7 +95,7 @@ class OnlineScreenScreenshotTest {
         )
         vm.onMessage(ServerMessage.Ended("g1", GameResult.BLACK_WON, EndReason.CHECKMATE, -9, 9))
         vm.onMessage(ServerMessage.RematchOffered("g1", PlayerColor.WHITE))
-        compose.setContent { ChessOnlineTheme(darkTheme = false) { OnlineScreen(vm, onBack = {}) } }
-        compose.onRoot().captureRoboImage("src/test/screenshots/online_result_ru.png")
+        compose.setContent { ChessOnlineTheme(darkTheme = true) { OnlineScreen(vm, onBack = {}) } }
+        compose.onRoot().captureRoboImage("src/test/screenshots/online_result.png")
     }
 }

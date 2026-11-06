@@ -85,4 +85,13 @@ class AccountServiceTest {
         assertTrue(!hasher.verify("Secret password", one))
         assertTrue(!hasher.verify("secret password", "garbage"))
     }
+
+    @Test
+    fun guestNamesFollowTheAppLanguage() {
+        val accounts = AccountService(InMemoryStorage(), passwords = PasswordHasher(iterations = 1_000))
+        assertTrue(accounts.authenticate(null, "ru-RU").account.name.startsWith("Игрок"))
+        assertTrue(accounts.authenticate(null, "zh-CN").account.name.startsWith("棋手"))
+        assertTrue(accounts.authenticate(null, "en-RU").account.name.startsWith("Player"))
+        assertTrue(accounts.authenticate(null, null).account.name.startsWith("Player"))
+    }
 }

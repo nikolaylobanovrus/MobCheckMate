@@ -15,7 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -79,7 +80,7 @@ abstract class StoreAssetsTest(private val lang: String) {
 
     private val out get() = "../docs/store/$lang"
     private val ru get() = lang == "ru"
-    private val me get() = PlayerInfo("me", if (ru) "Николай" else "Nick", 1542, country = if (ru) "RU" else "US")
+    private val me get() = PlayerInfo("me", if (ru) "Николай" else "Magnus_88", 1542, country = if (ru) "RU" else "NO")
     private val rival get() = PlayerInfo("op", if (ru) "Дмитрий_К" else "Lukas_chess", 1610, country = if (ru) "KZ" else "DE")
     private val client get() = FakeOnlineClient(me, listOf(RatingInfo(Speed.BLITZ, 1542, 37, false)), registered = true)
 
@@ -90,7 +91,7 @@ abstract class StoreAssetsTest(private val lang: String) {
 
     private fun capture(name: String, content: @Composable () -> Unit) {
         compose.mainClock.autoAdvance = false
-        compose.setContent { ChessOnlineTheme(darkTheme = false) { content() } }
+        compose.setContent { ChessOnlineTheme(darkTheme = true) { Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() } } }
         compose.mainClock.advanceTimeBy(700) // progress indicators past their first frame
         compose.onRoot().captureRoboImage("$out/$name.png")
     }
@@ -118,7 +119,7 @@ abstract class StoreAssetsTest(private val lang: String) {
         val arenaGames = OnlineViewModel(client, { 0L }, false, arena = true)
         vm.onMessage(ServerMessage.Tournaments(arenas()))
         capture("screenshots/02_tournaments") {
-            TournamentsScreen(vm, arenaGames, onBack = {}, liveCountdown = false)
+            TournamentsScreen(vm, arenaGames, onBack = null, liveCountdown = false)
         }
     }
 
@@ -139,7 +140,7 @@ abstract class StoreAssetsTest(private val lang: String) {
         }
         vm.onMessage(ServerMessage.Tournament(arena, lines, lines[1]))
         capture("screenshots/03_standings") {
-            TournamentsScreen(vm, arenaGames, onBack = {}, liveCountdown = false)
+            TournamentsScreen(vm, arenaGames, onBack = null, liveCountdown = false)
         }
     }
 
@@ -167,14 +168,21 @@ abstract class StoreAssetsTest(private val lang: String) {
             random = Random(1),
             ioDispatcher = Dispatchers.Unconfined,
         )
-        capture("screenshots/05_puzzles") { PuzzleScreen(vm, onBack = {}) }
+        capture("screenshots/05_puzzles") { PuzzleScreen(vm, onBack = null) }
     }
 
     @Test
     fun home() {
         capture("screenshots/06_home") {
-            val subtitle = stringResource(R.string.puzzle_daily_waiting) + " · " + pluralStringResource(R.plurals.puzzle_streak, 5, 5)
-            HomeScreen(onAction = {}, puzzleSubtitle = subtitle)
+            HomeScreen(
+                online = Samples.online(me),
+                puzzles = Samples.puzzles(),
+                tournaments = Samples.tournaments(),
+                onOnline = {}, onQuickPlay = {}, onComputer = {}, onFriend = {}, onDailyPuzzle = {}, onPuzzles = {},
+                onTournaments = {}, onProfile = {},
+                hour = 19,
+                liveCountdown = false,
+            )
         }
     }
 

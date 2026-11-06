@@ -1,44 +1,64 @@
 package ru.fourvic.chess.ui.game
 
-import android.content.res.Configuration
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.random.Random
 import ru.fourvic.chess.R
 import ru.fourvic.chess.audio.MoveSounds
+import ru.fourvic.chess.shared.chess.BoardPiece
 import ru.fourvic.chess.shared.chess.GameStatus
+import ru.fourvic.chess.shared.chess.PieceKind
 import ru.fourvic.chess.shared.chess.PlayerColor
-import ru.fourvic.chess.shared.chess.Promotion
 import ru.fourvic.chess.shared.engine.BotLevel
 import ru.fourvic.chess.ui.board.ChessBoard
-import ru.fourvic.chess.ui.common.ScreenScaffold
+import ru.fourvic.chess.ui.common.ActionButton
+import ru.fourvic.chess.ui.common.AppTopBar
+import ru.fourvic.chess.ui.common.Avatar
+import ru.fourvic.chess.ui.common.PrimaryButton
+import ru.fourvic.chess.ui.common.RoundIconButton
+import ru.fourvic.chess.ui.common.SecondaryButton
+import ru.fourvic.chess.ui.common.SegmentedControl
+import ru.fourvic.chess.ui.common.SectionTitle
+import ru.fourvic.chess.ui.common.pressable
+import ru.fourvic.chess.ui.theme.LocalBrand
 
+/** Game on this device, against the computer or a friend. */
 @Composable
 fun GameScreen(
     viewModel: GameViewModel = viewModel(),
@@ -48,129 +68,151 @@ fun GameScreen(
     val state = viewModel.state
     var showSetup by rememberSaveable { mutableStateOf(showSetupOnStart) }
     MoveSounds(key = state.ply, sound = soundFor(state))
-    val title = stringResource(
-        if (state.opponent is Opponent.Computer) R.string.home_computer else R.string.home_friend,
-    )
-    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val opponent = state.opponent
+    val balance = remember(state.pieces) { materialBalance(state.pieces) }
+    val brand = LocalBrand.current
 
-    ScreenScaffold(title = title, onBack = onBack) { padding ->
-        val board = @Composable { modifier: Modifier ->
-            ChessBoard(
-                state = state,
-                onSquareTapped = viewModel::onSquareTapped,
-                contentDescription = stringResource(R.string.board_description),
-                modifier = modifier,
-            )
-        }
-        val controls = @Composable {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(statusText(state), style = MaterialTheme.typography.titleLarge)
-                Text(opponentText(state.opponent), style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = viewModel::undo, enabled = state.canUndo) { Text(stringResource(R.string.undo)) }
-                    OutlinedButton(onClick = viewModel::flipBoard) { Text(stringResource(R.string.flip_board)) }
+    val title = stringResource(if (opponent is Opponent.Computer) R.string.home_computer else R.string.home_friend)
+    val subtitle = when (opponent) {
+        is Opponent.Computer -> stringResource(R.string.level_short, opponent.level.number, levelName(opponent.level))
+        Opponent.Friend -> stringResource(R.string.opponent_friend_label)
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            AppTopBar(title, onBack, subtitle = subtitle) {
+                RoundIconButton(R.drawable.ic_swap_vert, stringResource(R.string.flip_board), viewModel::flipBoard)
+            }
+        },
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+            val topColor = if (state.flipped) PlayerColor.WHITE else PlayerColor.BLACK
+            val strip = @Composable { color: PlayerColor ->
+                val ongoing = state.status == GameStatus.ONGOING
+                when {
+                    opponent is Opponent.Computer && color != opponent.humanColor -> PlayerStrip(
+                        name = stringResource(R.string.opponent_computer),
+                        detail = stringResource(R.string.level_rating, levelName(opponent.level), opponent.level.approximateRating),
+                        color = color,
+                        balance = balance,
+                        avatarIcon = R.drawable.ic_smart_toy_filled,
+                        avatarGradient = brand.computer,
+                        toMove = ongoing && state.sideToMove == color,
+                    )
+                    opponent is Opponent.Computer -> PlayerStrip(
+                        name = stringResource(R.string.you),
+                        detail = stringResource(if (color == PlayerColor.WHITE) R.string.color_white else R.string.color_black),
+                        color = color,
+                        balance = balance,
+                        avatarGradient = brand.tournaments,
+                        toMove = ongoing && state.sideToMove == color,
+                    )
+                    else -> PlayerStrip(
+                        name = stringResource(if (color == PlayerColor.WHITE) R.string.color_white else R.string.color_black),
+                        detail = stringResource(R.string.opponent_friend),
+                        color = color,
+                        balance = balance,
+                        avatarGradient = if (color == PlayerColor.WHITE) brand.friend else brand.computer,
+                        toMove = ongoing && state.sideToMove == color,
+                    )
                 }
-                Button(onClick = { showSetup = true }) { Text(stringResource(R.string.new_game)) }
             }
-        }
-
-        if (landscape) {
-            Row(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
+            GameLayout(
+                top = { strip(topColor) },
+                bottom = { strip(if (topColor == PlayerColor.WHITE) PlayerColor.BLACK else PlayerColor.WHITE) },
+                board = { modifier ->
+                    ChessBoard(
+                        state = state,
+                        onSquareTapped = viewModel::onSquareTapped,
+                        contentDescription = stringResource(R.string.board_description),
+                        modifier = modifier,
+                        movableColor = (opponent as? Opponent.Computer)?.humanColor ?: state.sideToMove,
+                    )
+                },
+                actions = {
+                    ActionBar {
+                        ActionButton(R.drawable.ic_add, stringResource(R.string.new_game), { showSetup = true })
+                        ActionButton(R.drawable.ic_undo, stringResource(R.string.undo), viewModel::undo, enabled = state.canUndo)
+                        ActionButton(R.drawable.ic_swap_vert, stringResource(R.string.flip_board), viewModel::flipBoard)
+                    }
+                },
             ) {
-                board(Modifier.fillMaxSize().weight(1f, fill = false))
-                controls()
+                if (state.status.isFinished) {
+                    val result = offlineResult(state)
+                    ResultCard(result.title, result.outcome, subtitle = result.reason) {
+                        PrimaryButton(stringResource(R.string.play_again), { viewModel.newGame(opponent) }, Modifier.fillMaxWidth(), icon = R.drawable.ic_replay)
+                        SecondaryButton(stringResource(R.string.change_settings), { showSetup = true }, Modifier.fillMaxWidth(), icon = R.drawable.ic_settings)
+                    }
+                } else {
+                    StatusLine(
+                        statusText(state),
+                        thinking = state.botThinking,
+                        alert = state.checkedKing != null,
+                    )
+                }
+                MoveList(state.san)
             }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                board(Modifier.fillMaxWidth().widthIn(max = 600.dp))
-                controls()
+            if (state.status == GameStatus.CHECKMATE && opponent is Opponent.Computer && state.sideToMove != opponent.humanColor) {
+                Confetti()
             }
         }
     }
 
-    if (state.pendingPromotion != null) {
-        PromotionDialog(onChosen = viewModel::onPromotionChosen)
-    }
+    state.pendingPromotion?.let { PromotionDialog(color = state.sideToMove, onChosen = viewModel::onPromotionChosen) }
     if (showSetup) {
-        NewGameDialog(
+        NewGameSheet(
             current = state.opponent,
-            onStart = { opponent ->
+            onStart = { next ->
                 showSetup = false
-                viewModel.newGame(opponent)
+                viewModel.newGame(next)
             },
             onDismiss = { showSetup = false },
         )
     }
 }
 
+private data class OfflineResult(val title: String, val reason: String, val outcome: Outcome)
+
 @Composable
-private fun statusText(state: GameUiState): String = when (state.status) {
-    GameStatus.ONGOING -> when {
-        state.botThinking -> stringResource(R.string.computer_thinking)
-        state.checkedKing != null -> stringResource(R.string.check)
-        state.sideToMove == PlayerColor.WHITE -> stringResource(R.string.white_to_move)
-        else -> stringResource(R.string.black_to_move)
+private fun offlineResult(state: GameUiState): OfflineResult {
+    val reason = when (state.status) {
+        GameStatus.CHECKMATE -> stringResource(R.string.reason_checkmate)
+        GameStatus.STALEMATE -> stringResource(R.string.stalemate)
+        GameStatus.DRAW_THREEFOLD_REPETITION -> stringResource(R.string.draw_repetition)
+        GameStatus.DRAW_INSUFFICIENT_MATERIAL -> stringResource(R.string.draw_insufficient_material)
+        GameStatus.DRAW_FIFTY_MOVES -> stringResource(R.string.draw_fifty_moves)
+        GameStatus.ONGOING -> ""
     }
+    if (state.status != GameStatus.CHECKMATE) return OfflineResult(stringResource(R.string.online_draw), reason, Outcome.DRAW)
     // The side to move is the one that has been mated.
-    GameStatus.CHECKMATE -> when (val opponent = state.opponent) {
-        is Opponent.Computer -> if (state.sideToMove == opponent.humanColor) {
-            stringResource(R.string.checkmate_computer_wins)
+    val winner = if (state.sideToMove == PlayerColor.WHITE) PlayerColor.BLACK else PlayerColor.WHITE
+    return when (val opponent = state.opponent) {
+        is Opponent.Computer -> if (winner == opponent.humanColor) {
+            OfflineResult(stringResource(R.string.game_victory), reason, Outcome.WIN)
         } else {
-            stringResource(R.string.checkmate_you_win)
+            OfflineResult(stringResource(R.string.game_defeat), reason, Outcome.LOSS)
         }
-        Opponent.Friend -> if (state.sideToMove == PlayerColor.WHITE) {
-            stringResource(R.string.checkmate_black_wins)
-        } else {
-            stringResource(R.string.checkmate_white_wins)
-        }
+        Opponent.Friend -> OfflineResult(
+            stringResource(if (winner == PlayerColor.WHITE) R.string.white_wins else R.string.black_wins),
+            reason,
+            Outcome.WIN,
+        )
     }
-    GameStatus.STALEMATE -> stringResource(R.string.stalemate)
-    GameStatus.DRAW_THREEFOLD_REPETITION -> stringResource(R.string.draw_repetition)
-    GameStatus.DRAW_INSUFFICIENT_MATERIAL -> stringResource(R.string.draw_insufficient_material)
-    GameStatus.DRAW_FIFTY_MOVES -> stringResource(R.string.draw_fifty_moves)
 }
 
 @Composable
-internal fun PromotionDialog(onChosen: (Promotion?) -> Unit) {
-    AlertDialog(
-        onDismissRequest = { onChosen(null) },
-        title = { Text(stringResource(R.string.promotion_title)) },
-        text = {
-            Column {
-                listOf(
-                    Promotion.QUEEN to R.string.piece_queen,
-                    Promotion.ROOK to R.string.piece_rook,
-                    Promotion.BISHOP to R.string.piece_bishop,
-                    Promotion.KNIGHT to R.string.piece_knight,
-                ).forEach { (promotion, label) ->
-                    TextButton(onClick = { onChosen(promotion) }) { Text(stringResource(label)) }
-                }
-            }
-        },
-        confirmButton = {},
-    )
+private fun statusText(state: GameUiState): String = when {
+    state.botThinking -> stringResource(R.string.computer_thinking)
+    state.checkedKing != null -> stringResource(R.string.check)
+    state.opponent is Opponent.Computer && state.sideToMove == state.opponent.humanColor ->
+        stringResource(R.string.online_your_move)
+    state.sideToMove == PlayerColor.WHITE -> stringResource(R.string.white_to_move)
+    else -> stringResource(R.string.black_to_move)
 }
 
 @Composable
-private fun opponentText(opponent: Opponent): String = when (opponent) {
-    Opponent.Friend -> stringResource(R.string.opponent_friend_label)
-    is Opponent.Computer -> stringResource(
-        R.string.opponent_computer_label,
-        opponent.level.number,
-        levelName(opponent.level),
-        opponent.level.approximateRating,
-    )
-}
-
-@Composable
-private fun levelName(level: BotLevel): String = stringResource(
+internal fun levelName(level: BotLevel): String = stringResource(
     when (level) {
         BotLevel.LEVEL_1 -> R.string.level_1
         BotLevel.LEVEL_2 -> R.string.level_2
@@ -180,91 +222,111 @@ private fun levelName(level: BotLevel): String = stringResource(
     },
 )
 
-private enum class ColorChoice { WHITE, BLACK, RANDOM }
+private enum class ColorChoice { WHITE, RANDOM, BLACK }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NewGameSheet(current: Opponent, onStart: (Opponent) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        NewGameSetup(current, onStart, Modifier.navigationBarsPadding())
+    }
+}
 
 /** Choice of opponent, bot level and colour before a game. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun NewGameDialog(
-    current: Opponent,
-    onStart: (Opponent) -> Unit,
-    onDismiss: () -> Unit,
-) {
+internal fun NewGameSetup(current: Opponent, onStart: (Opponent) -> Unit, modifier: Modifier = Modifier) {
     val currentComputer = current as? Opponent.Computer
     var vsComputer by rememberSaveable { mutableStateOf(current !is Opponent.Friend) }
     var levelNumber by rememberSaveable { mutableIntStateOf(currentComputer?.level?.number ?: 2) }
     var color by rememberSaveable {
         mutableStateOf(if (currentComputer?.humanColor == PlayerColor.BLACK) ColorChoice.BLACK else ColorChoice.WHITE)
     }
-    val level = BotLevel.of(levelNumber)
+    val brand = LocalBrand.current
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.new_game)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.opponent), style = MaterialTheme.typography.titleSmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = vsComputer,
-                        onClick = { vsComputer = true },
-                        label = { Text(stringResource(R.string.opponent_computer)) },
-                    )
-                    FilterChip(
-                        selected = !vsComputer,
-                        onClick = { vsComputer = false },
-                        label = { Text(stringResource(R.string.opponent_friend)) },
-                    )
-                }
-                if (vsComputer) {
-                    Text(stringResource(R.string.level), style = MaterialTheme.typography.titleSmall)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BotLevel.entries.forEach { candidate ->
-                            FilterChip(
-                                selected = candidate == level,
-                                onClick = { levelNumber = candidate.number },
-                                label = { Text(candidate.number.toString()) },
-                            )
-                        }
-                    }
-                    Text(
-                        stringResource(R.string.level_description, levelName(level), level.approximateRating),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(stringResource(R.string.your_color), style = MaterialTheme.typography.titleSmall)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            ColorChoice.WHITE to R.string.color_white,
-                            ColorChoice.BLACK to R.string.color_black,
-                            ColorChoice.RANDOM to R.string.color_random,
-                        ).forEach { (choice, label) ->
-                            FilterChip(
-                                selected = color == choice,
-                                onClick = { color = choice },
-                                label = { Text(stringResource(label)) },
-                            )
-                        }
+    Column(modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(stringResource(R.string.new_game), style = MaterialTheme.typography.headlineSmall)
+        SegmentedControl(
+            items = listOf(stringResource(R.string.opponent_computer), stringResource(R.string.opponent_friend_short)),
+            icons = listOf(R.drawable.ic_smart_toy, R.drawable.ic_group),
+            selected = if (vsComputer) 0 else 1,
+            onSelect = { vsComputer = it == 0 },
+        )
+        if (vsComputer) {
+            SectionTitle(stringResource(R.string.level))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                BotLevel.entries.forEach { level ->
+                    val selected = level.number == levelNumber
+                    Column(
+                        Modifier
+                            .width(118.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .pressable { levelNumber = level.number }
+                            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .border(2.dp, if (selected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(20.dp))
+                            .padding(vertical = 14.dp, horizontal = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Avatar(level.number.toString(), size = 44.dp, gradient = brand.computer)
+                        Text(levelName(level), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1)
+                        Text("≈${level.approximateRating}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(onClick = {
+            SectionTitle(stringResource(R.string.your_color))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(ColorChoice.WHITE to R.string.color_white, ColorChoice.RANDOM to R.string.color_random, ColorChoice.BLACK to R.string.color_black)
+                    .forEach { (choice, label) ->
+                        val selected = choice == color
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(20.dp))
+                                .pressable { color = choice }
+                                .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .border(2.dp, if (selected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(20.dp))
+                                .padding(vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Row {
+                                if (choice != ColorChoice.BLACK) KingPicture(PlayerColor.WHITE)
+                                if (choice != ColorChoice.WHITE) KingPicture(PlayerColor.BLACK)
+                            }
+                            Text(stringResource(label), style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+            }
+        } else {
+            Text(stringResource(R.string.opponent_friend_label), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.height(2.dp))
+        PrimaryButton(
+            stringResource(R.string.play),
+            onClick = {
                 val opponent = if (vsComputer) {
                     val humanColor = when (color) {
                         ColorChoice.WHITE -> PlayerColor.WHITE
                         ColorChoice.BLACK -> PlayerColor.BLACK
                         ColorChoice.RANDOM -> if (Random.nextBoolean()) PlayerColor.WHITE else PlayerColor.BLACK
                     }
-                    Opponent.Computer(level, humanColor)
+                    Opponent.Computer(BotLevel.of(levelNumber), humanColor)
                 } else {
                     Opponent.Friend
                 }
                 onStart(opponent)
-            }) { Text(stringResource(R.string.play)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            icon = R.drawable.ic_play_arrow,
+        )
+    }
+}
+
+@Composable
+private fun KingPicture(color: PlayerColor) {
+    PieceTile(BoardPiece(color, PieceKind.KING), 34.dp, Modifier.padding(horizontal = 2.dp))
 }

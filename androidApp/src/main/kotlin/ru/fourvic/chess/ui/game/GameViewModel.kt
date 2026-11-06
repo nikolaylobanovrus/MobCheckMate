@@ -46,6 +46,8 @@ data class GameUiState(
     /** Number of moves played; changes with every move, so the UI can react (sounds). */
     val ply: Int = 0,
     val lastMoveWasCapture: Boolean = false,
+    /** Moves in algebraic notation for the move list; empty where a list makes no sense (puzzles). */
+    val san: List<String> = emptyList(),
 )
 
 /**
@@ -178,6 +180,7 @@ class GameViewModel(
             botThinking = false,
             ply = game.moves.size,
             lastMoveWasCapture = game.lastMoveWasCapture,
+            san = game.sanMoves,
         )
     }
 

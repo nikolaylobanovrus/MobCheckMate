@@ -3,11 +3,14 @@ package ru.fourvic.chess.audio
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.os.Build
+import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import ru.fourvic.chess.R
 import ru.fourvic.chess.settings.LocalAppSettings
 
@@ -39,21 +42,27 @@ class SoundEffects(context: Context) {
 }
 
 /**
- * Plays a sound whenever the position changes: [key] identifies the position (for example the move count),
- * [sound] says which sound fits it, or null for none.
+ * Plays a sound and a short vibration whenever the position changes: [key] identifies the position (for example the
+ * move count), [sound] says which sound fits it, or null for none. Both can be switched off in the settings.
  */
 @Composable
 fun MoveSounds(key: Any?, sound: Sound?) {
     val context = LocalContext.current
-    val enabled = LocalAppSettings.current.sound
+    val view = LocalView.current
+    val settings = LocalAppSettings.current
     val effects = remember { SoundEffects(context.applicationContext) }
     DisposableEffect(effects) { onDispose { effects.release() } }
     val first = remember { booleanArrayOf(true) }
     LaunchedEffect(key) {
         if (first[0]) {
             first[0] = false // do not play for the position the screen opens with
-        } else if (enabled && sound != null) {
-            effects.play(sound)
+        } else if (sound != null) {
+            if (settings.sound) effects.play(sound)
+            if (settings.haptics) {
+                val strong = sound == Sound.CAPTURE || sound == Sound.CHECK || sound == Sound.GAME_END
+                val strongFeedback = if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY
+                view.performHapticFeedback(if (strong) strongFeedback else HapticFeedbackConstants.CLOCK_TICK)
+            }
         }
     }
 }

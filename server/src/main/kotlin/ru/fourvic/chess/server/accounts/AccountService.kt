@@ -42,7 +42,11 @@ class AccountService(
         val newToken = randomToken()
         val id = randomId()
         val number = 10_000 + random.nextInt(90_000)
-        val name = if (locale?.startsWith("ru") == true) "Игрок$number" else "Player$number"
+        val name = when {
+            locale?.startsWith("ru") == true -> "Игрок$number"
+            locale?.startsWith("zh") == true -> "棋手$number"
+            else -> "Player$number"
+        }
         return Session(storage.createAccount(id, name, hash(newToken), now()), newToken, created = true)
     }
 

@@ -71,6 +71,8 @@ class WebSocketOnlineClient(
     private val scope: CoroutineScope,
     private val tokens: TokenStore,
     private val serverUrl: () -> String,
+    /** Language and region sent to the server, for the default name and the flag. */
+    private val locale: () -> String = { Locale.getDefault().toLanguageTag() },
 ) : OnlineClient {
     private val http = HttpClient(OkHttp) {
         install(WebSockets) { pingIntervalMillis = 15_000 }
@@ -94,7 +96,7 @@ class WebSocketOnlineClient(
                 runCatching {
                     http.webSocket(serverUrl()) {
                         outbox = Channel(Channel.BUFFERED)
-                        send(Frame.Text(ClientMessage.Hello(tokens.load(), locale = Locale.getDefault().toLanguageTag()).encode()))
+                        send(Frame.Text(ClientMessage.Hello(tokens.load(), locale = locale()).encode()))
                         val writer = launch { for (m in outbox) send(Frame.Text(m.encode())) }
                         try {
                             for (frame in incoming) {
