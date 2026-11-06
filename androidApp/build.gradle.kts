@@ -6,6 +6,10 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
+// Host of the game server and its website in release builds. A test build can point elsewhere, for example to the
+// spare name of the VPS while the main domain's DNS is broken: -PserverHost=chess.159-194-210-112.sslip.io
+val serverHost = providers.gradleProperty("serverHost").orNull ?: "chess.4vic.ru"
+
 // Release signing comes from keystore.properties (not in git); see keystore.properties.example.
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("keystore.properties")
@@ -26,7 +30,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         // Privacy policy, terms and the account deletion page, served by the game server.
-        buildConfigField("String", "SITE_URL", "\"https://chess.4vic.ru\"")
+        buildConfigField("String", "SITE_URL", "\"https://$serverHost\"")
     }
 
     // One code base, one build per store: payments, push transport and store links differ.
@@ -59,7 +63,7 @@ android {
             buildConfigField("String", "SERVER_URL", "\"ws://10.0.2.2:8080/ws\"")
         }
         release {
-            buildConfigField("String", "SERVER_URL", "\"wss://chess.4vic.ru/ws\"")
+            buildConfigField("String", "SERVER_URL", "\"wss://$serverHost/ws\"")
             signingConfigs.findByName("release")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true

@@ -3,7 +3,7 @@
 #   1. fetch the server build that CI publishes to the git branch deploy/chess-server-dist;
 #   2. if it is new, switch /opt/chess/current to it and restart the server container next to PostgreSQL;
 #   3. check /health and go back to the previous build if the new one does not answer;
-#   4. once DNS points here, get the HTTPS certificate (certbot, at most one attempt an hour);
+#   4. for every domain that points here, get the HTTPS certificate (certbot, at most one attempt an hour each);
 #   5. write the outcome to /var/www/chess-status/deploy-status.json, served at https://<domain>/deploy-status.json,
 #      so the result can be checked from outside without logging in.
 #
@@ -20,7 +20,8 @@ BRANCH=${DEPLOY_BRANCH:-deploy/chess-server-dist}
 BASE=${CHESS_BASE:-/opt/chess}
 STATUS_FILE=${STATUS_FILE:-/var/www/chess-status/deploy-status.json}
 PORT=${CHESS_PORT:-18080}
-DOMAIN=${DOMAIN:-chess.4vic.ru}
+# The main domain and the spare one that needs no DNS set-up (<name>.<ip-with-dashes>.sslip.io); see setup.sh.
+DOMAINS=${DOMAINS:-chess.4vic.ru}
 KEEP_RELEASES=5
 # A restart ends the games in progress (they live in memory), so a new build waits for them, but not forever.
 MAX_WAIT_FOR_GAMES=1800
@@ -115,28 +116,33 @@ fi
 HEALTH=$(curl -fsS --max-time 3 "http://127.0.0.1:$PORT/health" 2>/dev/null || echo '{}')
 
 # --- 4. HTTPS ---------------------------------------------------------------------------------------------------
-TLS="есть"
-if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
-    TLS="нет: домен $DOMAIN ещё не указывает на этот сервер"
-    target=$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk 'NR == 1 { print $1 }' || true) # empty while DNS does not resolve
-    if [ -n "$target" ] && hostname -I | tr ' ' '\n' | grep -qx "$target"; then
-        stamp=$BASE/.certbot-attempt
-        if ! command -v certbot >/dev/null; then
-            TLS="нет: не установлен certbot"
-        elif [ -f "$stamp" ] && [ $(($(date +%s) - $(stat -c %Y "$stamp"))) -lt 3600 ]; then
-            TLS="нет: certbot не смог, следующая попытка в течение часа"
-        else
-            touch "$stamp"
-            EVENT=true
-            if certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect --register-unsafely-without-email >/dev/null 2>&1; then
-                TLS="выпущен"
-                rm -f "$stamp"
+TLS=""
+for domain in $DOMAINS; do
+    if [ -d "/etc/letsencrypt/live/$domain" ]; then
+        status="есть"
+    else
+        status="нет: домен ещё не указывает на этот сервер"
+        target=$(getent ahostsv4 "$domain" 2>/dev/null | awk 'NR == 1 { print $1 }' || true) # empty while DNS does not resolve
+        if [ -n "$target" ] && hostname -I | tr ' ' '\n' | grep -qx "$target"; then
+            stamp=$BASE/.certbot-attempt-$domain
+            if ! command -v certbot >/dev/null; then
+                status="нет: не установлен certbot"
+            elif [ -f "$stamp" ] && [ $(($(date +%s) - $(stat -c %Y "$stamp"))) -lt 3600 ]; then
+                status="нет: certbot не смог, следующая попытка в течение часа"
             else
-                TLS="нет: certbot не смог, следующая попытка в течение часа"
+                touch "$stamp"
+                EVENT=true
+                if certbot --nginx -d "$domain" --non-interactive --agree-tos --redirect --register-unsafely-without-email >/dev/null 2>&1; then
+                    status="выпущен"
+                    rm -f "$stamp"
+                else
+                    status="нет: certbot не смог, следующая попытка в течение часа"
+                fi
             fi
         fi
     fi
-fi
+    TLS+="$domain=$status"$'\n'
+done
 
 # --- 5. Status --------------------------------------------------------------------------------------------------
 python3 - "$STATUS_FILE" "$HEAD" "$SOURCE" "$RESULT" "$TLS" "$HEALTH" "$EVENT" <<'PY'
@@ -152,6 +158,7 @@ try:
     health = json.loads(health)
 except Exception:
     health = {}
+tls = dict(line.split("=", 1) for line in tls.splitlines() if "=" in line)
 # Only events go to the history; otherwise 288 identical "running" lines a day would push everything useful out.
 history = prev.get("history", [])
 if event == "true":
@@ -168,4 +175,4 @@ f.write_text(json.dumps({
 f.chmod(0o644)
 PY
 
-log "$HEAD: $RESULT; TLS: $TLS"
+log "$HEAD: $RESULT; TLS: $(echo "$TLS" | tr '\n' ' ')"

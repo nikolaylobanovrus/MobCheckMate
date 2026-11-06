@@ -9,7 +9,8 @@
 # What it does, and nothing else:
 #   - installs Docker from the Ubuntu repositories if it is missing;
 #   - creates /opt/chess with the compose file, a generated database password and the pull script;
-#   - adds the nginx site for chess.4vic.ru (other sites are not touched; nginx -t before reload);
+#   - adds nginx sites for chess.4vic.ru and for a spare name that needs no DNS set-up,
+#     chess.<server-ip-with-dashes>.sslip.io (other sites are not touched; nginx -t before reload);
 #   - starts the first build and the five-minute timer that deploys new builds (see chess-pull.sh);
 #   - adds a daily database backup and log rotation.
 # Running it again is safe: existing settings and the database stay.
@@ -56,6 +57,12 @@ docker compose version >/dev/null 2>&1 || apt-get install -y -q docker-compose-v
 systemctl enable --now docker
 command -v certbot >/dev/null || apt-get install -y -q certbot python3-certbot-nginx
 
+# The public address of this server and the spare name built from it: sslip.io answers a.b.c.d for
+# <anything>.a-b-c-d.sslip.io by itself, so it works while the main domain's DNS does not.
+IP=$(ip -4 route get 1.1.1.1 | awk '{ for (i = 1; i < NF; i++) if ($i == "src") print $(i + 1) }')
+[ -n "$IP" ] || IP=$(hostname -I | awk '{ print $1 }')
+DOMAINS=${DOMAINS:-"$DOMAIN chess.${IP//./-}.sslip.io"}
+
 say "Files in $BASE"
 mkdir -p "$BASE/releases" /var/www/chess-status /var/backups/chess
 fetch() { curl -fsSL "$RAW/$1" -o "$2"; }
@@ -73,25 +80,27 @@ if [ ! -f "$BASE/.env" ]; then
     umask 022
 fi
 
-say "nginx site $DOMAIN"
-if [ ! -f /etc/nginx/sites-available/chess ]; then
-    fetch nginx-chess.conf /etc/nginx/sites-available/chess
-    sed -i "s/server_name chess.4vic.ru;/server_name $DOMAIN;/" /etc/nginx/sites-available/chess
-fi
-ln -sf /etc/nginx/sites-available/chess /etc/nginx/sites-enabled/chess
+say "nginx sites: $DOMAINS"
+fetch nginx-chess-upgrade.conf /etc/nginx/conf.d/chess-upgrade.conf
+for domain in $DOMAINS; do
+    site=/etc/nginx/sites-available/chess-$domain
+    if [ ! -f "$site" ]; then # once certbot has added HTTPS to it, the file is left alone
+        fetch nginx-chess.conf "$site"
+        sed -i "s/server_name chess.4vic.ru;/server_name $domain;/" "$site"
+    fi
+    ln -sf "$site" "/etc/nginx/sites-enabled/chess-$domain"
+done
 nginx -t
 systemctl reload nginx
 
 say "First deploy"
-DOMAIN=$DOMAIN "$BASE/chess-pull.sh"
+DOMAINS=$DOMAINS "$BASE/chess-pull.sh"
 
 say "Timer, backups, log rotation"
 fetch chess-pull.service /etc/systemd/system/chess-pull.service
 fetch chess-pull.timer /etc/systemd/system/chess-pull.timer
-if [ "$DOMAIN" != chess.4vic.ru ]; then
-    mkdir -p /etc/systemd/system/chess-pull.service.d
-    printf '[Service]\nEnvironment=DOMAIN=%s\n' "$DOMAIN" >/etc/systemd/system/chess-pull.service.d/domain.conf
-fi
+mkdir -p /etc/systemd/system/chess-pull.service.d
+printf '[Service]\nEnvironment="DOMAINS=%s"\n' "$DOMAINS" >/etc/systemd/system/chess-pull.service.d/domains.conf
 systemctl daemon-reload
 systemctl enable --now chess-pull.timer
 fetch chess-backup /etc/cron.daily/chess-backup
@@ -103,8 +112,8 @@ curl -fsS "http://127.0.0.1:$PORT/health" && echo
 cat /var/www/chess-status/deploy-status.json
 cat <<EOF
 
-Next:
-  1. DNS: an A record for $DOMAIN pointing to this server: $(hostname -I | awk '{print $1}')
-  2. The certificate is issued by itself within five minutes after DNS works (or now: certbot --nginx -d $DOMAIN).
-  3. Status from anywhere: https://$DOMAIN/deploy-status.json (http:// until the certificate is there).
+Addresses: $DOMAINS
+  1. DNS: an A record for $DOMAIN pointing to this server: $IP (the sslip.io name works without it).
+  2. Certificates are issued by themselves within five minutes after a name resolves here.
+  3. Status from anywhere: https://<address>/deploy-status.json (http:// until the certificate is there).
 EOF
