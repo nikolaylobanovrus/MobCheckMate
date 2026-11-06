@@ -26,7 +26,14 @@ import ru.fourvic.chess.shared.protocol.ServerMessage
 import ru.fourvic.chess.shared.protocol.decodeServerMessage
 import ru.fourvic.chess.shared.protocol.encode
 
-enum class ConnectionState { OFFLINE, CONNECTING, CONNECTED }
+enum class ConnectionState {
+    OFFLINE,
+    CONNECTING,
+    CONNECTED,
+
+    /** The account is open on another device; [OnlineClient.start] takes it back to this one. */
+    REPLACED,
+}
 
 /** Connection to the game server, shared by all screens. */
 interface OnlineClient {
@@ -40,6 +47,9 @@ interface OnlineClient {
 
     /** Sends when connected; returns false otherwise. */
     fun send(message: ClientMessage): Boolean
+
+    /** Forgets the account on this device and connects again as a new guest. */
+    fun signOut()
 }
 
 /** Stores the secret account token on the device. */
@@ -101,11 +111,19 @@ class WebSocketOnlineClient(
                                         tokens.save(null)
                                         _welcome.value = null
                                     }
+                                    is ServerMessage.LoggedIn -> tokens.save(message.token)
                                     else -> Unit
                                 }
                                 _messages.emit(message)
                                 // Do not create a new guest account right away; the next start() does that.
                                 if (message == ServerMessage.AccountDeleted) stop()
+                                // Reconnecting by itself would take the account back from the other device.
+                                if (message == ServerMessage.SignedInElsewhere) {
+                                    stop()
+                                    _state.value = ConnectionState.REPLACED
+                                }
+                                // Signed in to a saved account: connect again with its token.
+                                if (message is ServerMessage.LoggedIn) restart()
                             }
                         } finally {
                             writer.cancel()
@@ -113,8 +131,9 @@ class WebSocketOnlineClient(
                         }
                     }
                 }
-                _state.value = ConnectionState.OFFLINE
+                // After stop() the state is already set (offline, or replaced); a new start() may be running too.
                 if (!isActive) break
+                _state.value = ConnectionState.OFFLINE
                 delay(backoffMs)
                 backoffMs = (backoffMs * 2).coerceAtMost(30_000L)
             }
@@ -125,6 +144,17 @@ class WebSocketOnlineClient(
         job?.cancel()
         job = null
         _state.value = ConnectionState.OFFLINE
+    }
+
+    override fun signOut() {
+        tokens.save(null)
+        _welcome.value = null
+        restart()
+    }
+
+    private fun restart() {
+        stop()
+        start()
     }
 
     override fun send(message: ClientMessage): Boolean =

@@ -18,8 +18,11 @@ import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.readText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
@@ -41,9 +44,10 @@ import ru.fourvic.chess.shared.protocol.ServerMessage
 import ru.fourvic.chess.shared.protocol.decodeClientMessage
 import ru.fourvic.chess.shared.protocol.encode
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
-const val SERVER_VERSION = "0.4.0"
+const val SERVER_VERSION = "0.5.0"
 
 /** Settings from environment variables; without DATABASE_URL everything is kept in memory. */
 data class ServerConfig(
@@ -90,6 +94,10 @@ fun Application.module(
     val server = GameServer(storage, accounts, scope = this, roomSettings = rooms, bots = botSettings)
     val arenas = ArenaManager(server, storage, scope = this, settings = arenaSettings)
     val log = LoggerFactory.getLogger("ws")
+    // Password hashing is slow on purpose (PBKDF2, a fraction of a second of CPU each). It runs on its own threads, two
+    // at a time, so games never wait for it; the queue is bounded and every connection gets a few attempts a minute.
+    val passwordWork = Dispatchers.Default.limitedParallelism(2)
+    val passwordsQueued = AtomicInteger()
 
     install(ContentNegotiation) { json(ProtocolJson) }
     install(WebSockets) {
@@ -139,6 +147,8 @@ fun Application.module(
             }
             server.connected(account, session.token, connection, countryOf(hello.locale))
             val limiter = RateLimiter(capacity = 40, refillPerSecond = 10.0)
+            val passwordLimiter = RateLimiter(capacity = 5, refillPerSecond = 1 / 6.0)
+            val passwordLock = Mutex() // one at a time per connection, in order
             try {
                 for (frame in incoming) {
                     if (frame !is Frame.Text) continue
@@ -149,6 +159,24 @@ fun Application.module(
                     val message = runCatching { decodeClientMessage(frame.readText()) }.getOrNull()
                     if (message == null) {
                         connection.send(ServerMessage.Error(ErrorCode.BAD_REQUEST, "Cannot parse message"))
+                        continue
+                    }
+                    if (message.checksPassword) {
+                        if (passwordsQueued.get() >= MAX_PASSWORDS_QUEUED || !passwordLimiter.tryAcquire(System.currentTimeMillis())) {
+                            connection.send(ServerMessage.Error(ErrorCode.RATE_LIMITED, "Too many attempts, try again in a minute"))
+                            continue
+                        }
+                        passwordsQueued.incrementAndGet()
+                        launch(passwordWork) {
+                            try {
+                                passwordLock.withLock {
+                                    runCatching { server.handle(account, message) }
+                                        .onFailure { log.error("Failed to handle {} from {}", message::class.simpleName, account.id, it) }
+                                }
+                            } finally {
+                                passwordsQueued.decrementAndGet()
+                            }
+                        }
                         continue
                     }
                     runCatching {
@@ -164,6 +192,12 @@ fun Application.module(
         }
     }
 }
+
+/** Password requests waiting or running on the whole server; more are turned away until the queue shrinks. */
+private const val MAX_PASSWORDS_QUEUED = 32
+
+private val ClientMessage.checksPassword
+    get() = this is ClientMessage.Register || this is ClientMessage.Login || this is ClientMessage.ChangePassword
 
 /** The region part of a language tag such as ru-RU, or null when the tag has none. */
 fun countryOf(languageTag: String?): String? =

@@ -9,6 +9,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import ru.fourvic.chess.online.ConnectionState
 import ru.fourvic.chess.online.FakeOnlineClient
 import ru.fourvic.chess.shared.chess.PlayerColor
 import ru.fourvic.chess.shared.protocol.Clock
@@ -50,6 +51,16 @@ class OnlineScreenScreenshotTest {
         val vm = viewModel()
         compose.setContent { ChessOnlineTheme(darkTheme = false) { OnlineScreen(vm, onBack = {}) } }
         compose.onRoot().captureRoboImage("src/test/screenshots/online_lobby_ru.png")
+    }
+
+    /** The account has been opened on another device. */
+    @Test
+    fun replaced() {
+        val client = FakeOnlineClient(me, ratings, registered = true)
+        client.state.value = ConnectionState.REPLACED
+        val vm = OnlineViewModel(client, nowMs = { now }, tickerEnabled = false)
+        compose.setContent { ChessOnlineTheme(darkTheme = false) { OnlineScreen(vm, onBack = {}) } }
+        compose.onRoot().captureRoboImage("src/test/screenshots/online_replaced_ru.png")
     }
 
     @Test

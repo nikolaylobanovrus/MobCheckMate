@@ -9,7 +9,7 @@
 <body>
 <nav><a href="/">Главная</a><a href="/terms.html">Соглашение</a><a href="/delete-account.html">Удаление аккаунта</a><a href="#en">English</a></nav>
 <h1>Политика конфиденциальности</h1>
-<p class="meta">Приложение «Chess Victory» (Android, идентификатор ru.fourvic.chess). Редакция 1.0 от 27.10.2026.</p>
+<p class="meta">Приложение «Chess Victory» (Android, идентификатор ru.fourvic.chess). Редакция 1.1 от 06.11.2026.</p>
 
 <h2>1. Кто обрабатывает данные</h2>
 <p>Оператор персональных данных: ООО «СИТИОПТОМ», ОГРН 1107746643509, ИНН 7722725129,
@@ -17,11 +17,13 @@
 По всем вопросам о данных пишите на <a href="mailto:support@4vic.ru">support@4vic.ru</a>.</p>
 
 <h2>2. Какие данные мы получаем</h2>
-<p>Для игры не нужны ни телефон, ни почта, ни регистрация. При первом входе в онлайн-игру создаётся гостевой аккаунт.</p>
+<p>Для игры не нужны ни телефон, ни почта, ни регистрация. При первом входе в онлайн-игру создаётся гостевой аккаунт.
+Чтобы играть с другого устройства, его можно сохранить с именем и паролем — тоже без почты и телефона.</p>
 <table>
 <tr><th>Данные</th><th>Зачем</th></tr>
 <tr><td>Идентификатор аккаунта и секретный ключ входа. Ключ хранится на устройстве, на сервере — только его хэш</td><td>Узнавать вас при повторном подключении</td></tr>
-<tr><td>Имя игрока (ник). Сначала оно создаётся автоматически, например «Игрок12345», его можно сменить</td><td>Показывать соперникам и в турнирных таблицах</td></tr>
+<tr><td>Имя игрока (ник). Сначала оно создаётся автоматически, например «Игрок12345», его можно сменить</td><td>Показывать соперникам и в турнирных таблицах; у сохранённого аккаунта — входить по имени</td></tr>
+<tr><td>Пароль, если вы сохранили аккаунт. Хранится только в виде стойкого хэша (PBKDF2-SHA256 с солью), сам пароль на сервере не хранится и никому не виден</td><td>Входить в аккаунт с другого устройства</td></tr>
 <tr><td>Партии: ходы, контроль времени, результат, время начала и окончания; рейтинги; участие и очки в турнирах</td><td>Проводить партии и турниры, считать рейтинг, разбирать жалобы на нечестную игру</td></tr>
 <tr><td>Язык и регион из настроек устройства</td><td>Выбрать язык имени по умолчанию и показать флаг страны рядом с именем. Местоположение (GPS, сети) не определяется</td></tr>
 <tr><td>IP-адрес и технические сведения о соединении</td><td>Установить соединение и защищать сервер от перегрузки и атак. В базу данных не записываются; могут попадать в технические журналы, которые хранятся не дольше 30 дней</td></tr>
@@ -46,14 +48,15 @@
 по договору поручения обработки, и у государственных органов в случаях, прямо предусмотренных законом.</p>
 
 <h2>6. Сколько хранятся данные</h2>
-<p>Пока существует аккаунт. После удаления аккаунта имя, ключ входа и рейтинги удаляются сразу. Записи сыгранных партий
+<p>Пока существует аккаунт. После удаления аккаунта имя, ключи входа, хэш пароля и рейтинги удаляются сразу. Записи сыгранных партий
 остаются в истории соперников без связи с вами (игрок обозначается как удалённый). Резервные копии базы перезаписываются
 в течение 30 дней.</p>
 
 <h2>7. Ваши права</h2>
 <ul>
 <li>узнать, какие данные о вас хранятся, и получить их копию — напишите на <a href="mailto:support@4vic.ru">support@4vic.ru</a>;</li>
-<li>изменить имя — в приложении: «Настройки» → «Онлайн-аккаунт» → «Сменить имя»;</li>
+<li>изменить имя или пароль — в приложении: «Настройки» → «Онлайн-аккаунт» → «Сменить имя» или «Сменить пароль».
+Забытый пароль восстановить нельзя: почту мы не спрашиваем, поэтому не можем убедиться, что аккаунт ваш;</li>
 <li>удалить аккаунт — в приложении или по почте, подробно на странице <a href="/delete-account.html">«Удаление аккаунта»</a>;</li>
 <li>отозвать согласие и обжаловать наши действия в Роскомнадзоре (rkn.gov.ru) или в суде.</li>
 </ul>
@@ -68,7 +71,7 @@
 
 <hr id="en">
 <h1>Privacy policy</h1>
-<p class="meta">Chess Victory for Android (package ru.fourvic.chess). Version 1.0 of 27 October 2026.</p>
+<p class="meta">Chess Victory for Android (package ru.fourvic.chess). Version 1.1 of 6 November 2026.</p>
 
 <h2>Who processes the data</h2>
 <p>The data controller is SITIOPTOM LLC (OOO «СИТИОПТОМ»), OGRN 1107746643509, INN 7722725129,
@@ -79,6 +82,8 @@ Contact: <a href="mailto:support@4vic.ru">support@4vic.ru</a>.</p>
 <ul>
 <li>An account identifier and a secret sign-in key. The key stays on your device; the server keeps only its hash.</li>
 <li>Your player name. A name such as "Player12345" is created for you; you can change it.</li>
+<li>Your password, if you save the account to play from other devices. Only a salted PBKDF2-SHA256 hash is stored, never
+the password itself. As we do not ask for an email, a forgotten password cannot be reset.</li>
 <li>Your games (moves, time control, result, start and end time), ratings, tournament entries and points.</li>
 <li>Your device language and region setting, to pick the default name and show a country flag next to it.
 We do not determine your location.</li>
@@ -95,12 +100,12 @@ in the Russian Federation; connections are encrypted (TLS). We do not sell or sh
 acting on our instructions, and authorities where the law requires it have access.</p>
 
 <h2>Retention and deletion</h2>
-<p>The data is kept while your account exists. When you delete the account, your name, sign-in key and ratings are removed
+<p>The data is kept while your account exists. When you delete the account, your name, sign-in keys, password hash and ratings are removed
 at once; your past games remain in your opponents' history without any link to you. Backups are overwritten within 30 days.
 See <a href="/delete-account.html#en">how to delete your account</a>.</p>
 
 <h2>Your rights</h2>
-<p>You can ask for a copy of your data, change your name in the app, delete your account, and complain to the Russian data
+<p>You can ask for a copy of your data, change your name or password in the app, delete your account, and complain to the Russian data
 protection authority (Roskomnadzor). We answer requests within 10 working days.</p>
 
 <h2>Children</h2>

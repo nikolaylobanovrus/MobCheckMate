@@ -206,6 +206,20 @@ sealed interface ClientMessage {
     @SerialName("rename")
     data class Rename(val name: String) : ClientMessage
 
+    /** Saves the current guest account under a unique name with a password, to sign in on other devices. */
+    @Serializable
+    @SerialName("register")
+    data class Register(val name: String, val password: String) : ClientMessage
+
+    /** Signs in to a saved account; the reply [ServerMessage.LoggedIn] carries a token for this device. */
+    @Serializable
+    @SerialName("login")
+    data class Login(val name: String, val password: String) : ClientMessage
+
+    @Serializable
+    @SerialName("change_password")
+    data class ChangePassword(val oldPassword: String, val newPassword: String) : ClientMessage
+
     /** Asks for the snapshot of the player's current game, if any (for screens opened after the connect). */
     @Serializable
     @SerialName("game_state")
@@ -254,9 +268,24 @@ sealed interface ClientMessage {
 @Serializable
 sealed interface ServerMessage {
 
+    /** [registered]: the account is saved with a name and password and can be signed in to on other devices. */
     @Serializable
     @SerialName("welcome")
-    data class Welcome(val player: PlayerInfo, val token: String, val ratings: List<RatingInfo>) : ServerMessage
+    data class Welcome(
+        val player: PlayerInfo,
+        val token: String,
+        val ratings: List<RatingInfo>,
+        val registered: Boolean = false,
+    ) : ServerMessage
+
+    /** Signed in: the device keeps [token] and connects again with it. */
+    @Serializable
+    @SerialName("logged_in")
+    data class LoggedIn(val token: String) : ServerMessage
+
+    @Serializable
+    @SerialName("password_changed")
+    data object PasswordChanged : ServerMessage
 
     @Serializable
     @SerialName("seeking")
@@ -313,6 +342,14 @@ sealed interface ServerMessage {
     @SerialName("account_deleted")
     data object AccountDeleted : ServerMessage
 
+    /**
+     * The account has just connected from another device, which now plays for it; this connection is closed. The
+     * client should not reconnect by itself, or the two devices would keep taking the account from each other.
+     */
+    @Serializable
+    @SerialName("signed_in_elsewhere")
+    data object SignedInElsewhere : ServerMessage
+
     @Serializable
     @SerialName("error")
     data class Error(val code: ErrorCode, val message: String) : ServerMessage
@@ -332,7 +369,9 @@ sealed interface ServerMessage {
 }
 
 @Serializable
-enum class ErrorCode { BAD_REQUEST, ILLEGAL_MOVE, NOT_YOUR_TURN, NO_SUCH_GAME, UNAUTHORIZED, RATE_LIMITED, UNSUPPORTED_VERSION, NAME_TAKEN, NO_SUCH_TOURNAMENT }
+enum class ErrorCode { BAD_REQUEST, ILLEGAL_MOVE, NOT_YOUR_TURN, NO_SUCH_GAME, UNAUTHORIZED, RATE_LIMITED, UNSUPPORTED_VERSION, NAME_TAKEN, NO_SUCH_TOURNAMENT,
+    INVALID_NAME, WEAK_PASSWORD, WRONG_PASSWORD, TOO_MANY_ATTEMPTS,
+}
 
 /** JSON settings shared by the client and the server. */
 val ProtocolJson: Json = Json {

@@ -184,7 +184,7 @@ private fun TournamentList(state: TournamentsUiState, viewModel: TournamentViewM
         modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ConnectionNotice(state.connection, viewModel::refreshList)
+        ConnectionNotice(state.connection, viewModel::reconnect)
         PrivateArenaCard(state, onJoin = viewModel::joinByCode, onCreate = { creating = true })
         val groups = listOf(
             TournamentStatus.STARTED to R.string.arena_section_started,
@@ -222,6 +222,9 @@ private fun ConnectionNotice(connection: ConnectionState, onRetry: () -> Unit) {
             if (connection == ConnectionState.CONNECTING) {
                 CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                 Text(stringResource(R.string.online_connecting))
+            } else if (connection == ConnectionState.REPLACED) {
+                Text(stringResource(R.string.online_replaced), modifier = Modifier.weight(1f))
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.online_play_here)) }
             } else {
                 Text(stringResource(R.string.online_offline), modifier = Modifier.weight(1f))
                 TextButton(onClick = onRetry) { Text(stringResource(R.string.online_retry)) }

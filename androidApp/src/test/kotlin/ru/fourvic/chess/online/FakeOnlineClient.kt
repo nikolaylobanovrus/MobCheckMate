@@ -8,18 +8,23 @@ import ru.fourvic.chess.shared.protocol.RatingInfo
 import ru.fourvic.chess.shared.protocol.ServerMessage
 
 /** Records what the app sends; tests push server messages through [messages] or straight into the view model. */
-class FakeOnlineClient(me: PlayerInfo, ratings: List<RatingInfo> = emptyList()) : OnlineClient {
+class FakeOnlineClient(me: PlayerInfo, ratings: List<RatingInfo> = emptyList(), registered: Boolean = false) : OnlineClient {
     override val state: MutableStateFlow<ConnectionState> = MutableStateFlow(ConnectionState.CONNECTED)
-    override val welcome: MutableStateFlow<ServerMessage.Welcome?> = MutableStateFlow(ServerMessage.Welcome(me, "token", ratings))
+    override val welcome: MutableStateFlow<ServerMessage.Welcome?> = MutableStateFlow(ServerMessage.Welcome(me, "token", ratings, registered))
     override val messages: MutableSharedFlow<ServerMessage> = MutableSharedFlow(extraBufferCapacity = 64)
     val sent = mutableListOf<ClientMessage>()
     var starts = 0
+    var signOuts = 0
 
     override fun start() {
         starts++
     }
 
     override fun stop() = Unit
+
+    override fun signOut() {
+        signOuts++
+    }
 
     override fun send(message: ClientMessage): Boolean {
         if (state.value != ConnectionState.CONNECTED) return false

@@ -166,7 +166,15 @@ private fun ConnectionCard(state: OnlineUiState, onRetry: () -> Unit) {
                         },
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    Text(stringResource(R.string.online_name_hint), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(if (state.registered) R.string.online_name_hint else R.string.online_guest_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                state.connection == ConnectionState.REPLACED -> {
+                    Text(stringResource(R.string.online_replaced), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.online_replaced_hint), style = MaterialTheme.typography.bodySmall)
+                    Button(onClick = onRetry) { Text(stringResource(R.string.online_play_here)) }
                 }
                 state.connection == ConnectionState.OFFLINE -> {
                     Text(stringResource(R.string.online_offline), style = MaterialTheme.typography.titleMedium)
@@ -326,7 +334,13 @@ private fun GamePanel(state: OnlineUiState, viewModel: OnlineViewModel) {
             state.opponentAwaySeconds?.let {
                 Banner(stringResource(R.string.online_opponent_left, it))
             }
-            if (state.connection != ConnectionState.CONNECTED) Banner(stringResource(R.string.online_reconnecting))
+            when (state.connection) {
+                ConnectionState.CONNECTED -> Unit
+                ConnectionState.REPLACED -> Banner(stringResource(R.string.online_replaced)) {
+                    TextButton(onClick = viewModel::reconnect) { Text(stringResource(R.string.online_play_here)) }
+                }
+                else -> Banner(stringResource(R.string.online_reconnecting))
+            }
             if (state.opponentOffersDraw) {
                 Banner(stringResource(R.string.online_draw_offered)) {
                     TextButton(onClick = viewModel::offerDraw) { Text(stringResource(R.string.online_accept)) }

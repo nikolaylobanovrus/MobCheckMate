@@ -9,6 +9,7 @@ import ru.fourvic.chess.shared.protocol.Speed
 import ru.fourvic.chess.shared.rating.Rating
 import java.sql.Connection
 import java.sql.ResultSet
+import java.sql.SQLException
 import javax.sql.DataSource
 
 /**
@@ -27,34 +28,79 @@ class JdbcStorage(private val dataSource: DataSource) : Storage, AutoCloseable {
 
     override fun createAccount(id: String, name: String, tokenHash: String, now: Long): Account {
         connection { c ->
-            c.prepareStatement("INSERT INTO accounts (id, name, token_hash, created_at) VALUES (?, ?, ?, ?)").use {
-                it.setString(1, id); it.setString(2, name); it.setString(3, tokenHash); it.setLong(4, now)
+            c.prepareStatement("INSERT INTO accounts (id, name, created_at) VALUES (?, ?, ?)").use {
+                it.setString(1, id); it.setString(2, name); it.setLong(3, now)
                 it.executeUpdate()
             }
         }
+        addSession(id, tokenHash, now)
         return Account(id, name, now)
     }
 
     override fun findAccountByTokenHash(tokenHash: String): Account? = connection { c ->
-        c.prepareStatement("SELECT id, name, created_at FROM accounts WHERE token_hash = ?").use {
+        c.prepareStatement(
+            "SELECT a.id, a.name, a.created_at, a.password_hash FROM sessions s JOIN accounts a ON a.id = s.account_id WHERE s.token_hash = ?",
+        ).use {
             it.setString(1, tokenHash)
             it.executeQuery().use { rs -> if (rs.next()) account(rs) else null }
         }
     }
 
     override fun findAccount(id: String): Account? = connection { c ->
-        c.prepareStatement("SELECT id, name, created_at FROM accounts WHERE id = ?").use {
+        c.prepareStatement("SELECT id, name, created_at, password_hash FROM accounts WHERE id = ?").use {
             it.setString(1, id)
             it.executeQuery().use { rs -> if (rs.next()) account(rs) else null }
         }
     }
 
-    override fun rename(id: String, name: String) {
+    override fun findAccountByLogin(login: String): Account? = connection { c ->
+        c.prepareStatement("SELECT id, name, created_at, password_hash FROM accounts WHERE login = ?").use {
+            it.setString(1, login)
+            it.executeQuery().use { rs -> if (rs.next()) account(rs) else null }
+        }
+    }
+
+    override fun addSession(accountId: String, tokenHash: String, now: Long) {
         connection { c ->
-            c.prepareStatement("UPDATE accounts SET name = ? WHERE id = ?").use {
-                it.setString(1, name); it.setString(2, id); it.executeUpdate()
+            c.prepareStatement("INSERT INTO sessions (token_hash, account_id, created_at) VALUES (?, ?, ?)").use {
+                it.setString(1, tokenHash); it.setString(2, accountId); it.setLong(3, now)
+                it.executeUpdate()
             }
         }
+    }
+
+    // The unique index on login decides races between two players taking the same name.
+    override fun rename(id: String, name: String): Boolean = uniqueLogin {
+        connection { c ->
+            c.prepareStatement("UPDATE accounts SET name = ?, login = CASE WHEN password_hash IS NULL THEN NULL ELSE ? END WHERE id = ?").use {
+                it.setString(1, name); it.setString(2, loginOf(name)); it.setString(3, id)
+                it.executeUpdate() == 1
+            }
+        }
+    }
+
+    override fun register(id: String, name: String, passwordHash: String): Boolean = uniqueLogin {
+        connection { c ->
+            c.prepareStatement("UPDATE accounts SET name = ?, login = ?, password_hash = ? WHERE id = ?").use {
+                it.setString(1, name); it.setString(2, loginOf(name)); it.setString(3, passwordHash); it.setString(4, id)
+                it.executeUpdate() == 1
+            }
+        }
+    }
+
+    override fun setPassword(id: String, passwordHash: String) {
+        connection { c ->
+            c.prepareStatement("UPDATE accounts SET password_hash = ? WHERE id = ?").use {
+                it.setString(1, passwordHash); it.setString(2, id); it.executeUpdate()
+            }
+        }
+    }
+
+    private inline fun uniqueLogin(block: () -> Boolean): Boolean = try {
+        block()
+    } catch (e: SQLException) {
+        // 23505 is unique_violation in PostgreSQL and H2.
+        if (e.sqlState == "23505") false else throw e
     }
 
     override fun deleteAccount(id: String) {
@@ -68,6 +114,7 @@ class JdbcStorage(private val dataSource: DataSource) : Storage, AutoCloseable {
                 c.prepareStatement("UPDATE games SET black_id = ? WHERE black_id = ?").use {
                     it.setString(1, InMemoryStorage.DELETED); it.setString(2, id); it.executeUpdate()
                 }
+                c.prepareStatement("DELETE FROM sessions WHERE account_id = ?").use { it.setString(1, id); it.executeUpdate() }
                 c.prepareStatement("DELETE FROM accounts WHERE id = ?").use { it.setString(1, id); it.executeUpdate() }
                 c.commit()
             } catch (e: Exception) {
@@ -162,15 +209,20 @@ class JdbcStorage(private val dataSource: DataSource) : Storage, AutoCloseable {
         (dataSource as? AutoCloseable)?.close()
     }
 
-    private fun account(rs: ResultSet) = Account(rs.getString(1), rs.getString(2), rs.getLong(3))
+    private fun account(rs: ResultSet) = Account(rs.getString(1), rs.getString(2), rs.getLong(3), rs.getString(4))
 
     private inline fun <T> connection(block: (Connection) -> T): T = dataSource.connection.use(block)
 
     companion object {
         private val SCHEMA = listOf(
+            // login is the lower-case name of a saved account (null for guests); password_hash is PBKDF2.
             """CREATE TABLE IF NOT EXISTS accounts (
-                id VARCHAR(32) PRIMARY KEY, name VARCHAR(40) NOT NULL,
-                token_hash VARCHAR(64) NOT NULL UNIQUE, created_at BIGINT NOT NULL)""",
+                id VARCHAR(32) PRIMARY KEY, name VARCHAR(40) NOT NULL, created_at BIGINT NOT NULL,
+                login VARCHAR(40) UNIQUE, password_hash VARCHAR(200))""",
+            // One row per device: the SHA-256 of the secret token the device keeps.
+            """CREATE TABLE IF NOT EXISTS sessions (
+                token_hash VARCHAR(64) PRIMARY KEY, account_id VARCHAR(32) NOT NULL, created_at BIGINT NOT NULL)""",
+            "CREATE INDEX IF NOT EXISTS sessions_account ON sessions (account_id)",
             """CREATE TABLE IF NOT EXISTS ratings (
                 account_id VARCHAR(32) NOT NULL, speed VARCHAR(16) NOT NULL,
                 rating DOUBLE PRECISION NOT NULL, deviation DOUBLE PRECISION NOT NULL,

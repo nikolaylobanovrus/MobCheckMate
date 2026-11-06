@@ -51,7 +51,7 @@
 > А ЕЩЁ
 > • Игра вдвоём на одном телефоне.
 > • Четыре цвета доски, тёмная тема, звуки ходов.
-> • Без регистрации: аккаунт создаётся сам, имя можно сменить.
+> • Без почты и телефона: играйте сразу, а чтобы перейти на другой телефон — сохраните аккаунт с ником и паролем.
 > • Маленький размер — около 4 МБ.
 
 **Что нового (первый релиз):** Первая версия: онлайн-партии, турниры каждый час, приватные турниры, бот на пяти
@@ -95,14 +95,14 @@
 > ALSO
 > • Two players on one phone.
 > • Four board colours, dark theme, move sounds.
-> • No sign-up: an account is created for you, and you can change your name.
+> • No email or phone needed: play at once, and save the account with a name and password to move to another phone.
 > • Small download, about 4 MB.
 
 **Category:** Games → Board.
 
 ## Google Play: раздел App content
 
-**Data safety** (соответствует политике конфиденциальности и реальному трафику приложения 1.0):
+**Data safety** (соответствует политике конфиденциальности 1.1 и реальному трафику приложения):
 
 | Вопрос | Ответ |
 |---|---|
@@ -111,6 +111,7 @@
 | Можно запросить удаление данных? | Да: в приложении и по ссылке `https://chess.4vic.ru/delete-account.html` |
 | Personal info → Name | Собирается (ник игрока), не передаётся третьим лицам, обязательно для онлайн-игры. Цели: App functionality, Account management |
 | Personal info → User IDs | Собирается (идентификатор аккаунта), не передаётся. Цели: App functionality, Account management, Fraud prevention, security, and compliance |
+| Account creation (раздел о создании аккаунта) | Да, способ: «Username and password»; ссылка на удаление: `https://chess.4vic.ru/delete-account.html`. Пароль хранится только как хэш PBKDF2 с солью, почта не собирается |
 | App activity → Other actions | Собирается (сыгранные партии, рейтинги, турниры), не передаётся. Цели: App functionality |
 | Остальные типы (местоположение, контакты, финансы, ID устройства, диагностика и др.) | Не собираются |
 

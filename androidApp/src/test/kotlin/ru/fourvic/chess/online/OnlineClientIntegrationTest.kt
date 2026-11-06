@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -120,6 +121,57 @@ class OnlineClientIntegrationTest {
                 assertNotNull(state.me)
                 a.client.send(ClientMessage.PauseTournament(arena.id))
                 assertTrue(a.next<ServerMessage.Tournament>().me!!.paused)
+            }
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    /** Phone saves the account; tablet signs in to it with the name and password, then signs out to a new guest. */
+    @Test
+    fun savedAccountMovesToAnotherDevice(): Unit = runBlocking {
+        val url = System.getProperty("onlineServer")
+        assumeTrue("Set -PonlineServer to run against a server", !url.isNullOrBlank())
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            withTimeout(30_000) {
+                val phone = Player(scope, url)
+                phone.client.start()
+                phone.connected()
+                val id = assertNotNull(phone.client.welcome.value).player.id
+                val name = "Тест" + id.filter(Char::isLetterOrDigit).take(8)
+                assertTrue(phone.client.send(ClientMessage.Register(name, "correct horse")))
+                assertEquals(name, phone.client.welcome.first { it?.registered == true }!!.player.name)
+
+                val tablet = Player(scope, url)
+                tablet.client.start()
+                tablet.connected()
+                val guestToken = tablet.tokens.token
+                assertTrue(tablet.client.send(ClientMessage.Login(name.uppercase(), "correct horse")))
+                tablet.next<ServerMessage.LoggedIn>()
+                // The client reconnects by itself with the new token and arrives in the saved account.
+                val signedIn = tablet.client.welcome.first { it?.registered == true }!!
+                assertEquals(id, signedIn.player.id)
+                assertTrue(tablet.tokens.token != guestToken)
+                tablet.connected()
+
+                // The phone is told and does not take the account back by itself.
+                phone.client.state.first { it == ConnectionState.REPLACED }
+                delay(2_500) // longer than the first reconnect delay
+                assertEquals(ConnectionState.REPLACED, phone.client.state.value)
+                assertEquals(ConnectionState.CONNECTED, tablet.client.state.value)
+
+                // "Play here" on the phone moves the account back.
+                phone.client.start()
+                phone.connected()
+                tablet.client.state.first { it == ConnectionState.REPLACED }
+
+                tablet.client.signOut()
+                val guest = tablet.client.welcome.first { it != null && !it.registered }!!
+                assertTrue(guest.player.id != id)
+                tablet.connected()
+                assertTrue(phone.client.send(ClientMessage.Ping(1)))
+                phone.next<ServerMessage.Pong>()
             }
         } finally {
             scope.cancel()

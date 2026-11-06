@@ -29,6 +29,7 @@ import ru.fourvic.chess.ui.puzzles.PuzzleScreen
 import ru.fourvic.chess.ui.puzzles.PuzzleViewModel
 import ru.fourvic.chess.ui.settings.AboutSection
 import ru.fourvic.chess.ui.settings.AccountSection
+import ru.fourvic.chess.ui.settings.AccountViewModel
 import ru.fourvic.chess.ui.settings.SettingsScreen
 import ru.fourvic.chess.ui.tournaments.TournamentViewModel
 import ru.fourvic.chess.ui.tournaments.TournamentsScreen
@@ -73,7 +74,7 @@ fun ChessApp(settingsRepository: SettingsRepository, online: OnlineClient) {
                 onBack = back,
             )
             Route.SETTINGS -> SettingsScreen(settings = settings, onChange = settingsRepository::update, onBack = back) {
-                AccountSection(online, settings, settingsRepository::update)
+                AccountSection(viewModel(key = "account") { AccountViewModel(online) }, settings, settingsRepository::update)
                 AboutSection()
             }
             Route.PUZZLES -> PuzzleScreen(

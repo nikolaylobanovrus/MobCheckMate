@@ -36,6 +36,8 @@ data class OnlineUiState(
     val connection: ConnectionState = ConnectionState.OFFLINE,
     val me: PlayerInfo? = null,
     val ratings: List<RatingInfo> = emptyList(),
+    /** Saved with a name and password; a guest is reminded to do so. */
+    val registered: Boolean = false,
     val phase: OnlinePhase = OnlinePhase.LOBBY,
     val rated: Boolean = true,
     val seeking: Clock? = null,
@@ -111,7 +113,9 @@ class OnlineViewModel(
         client.start()
         viewModelScope.launch { client.state.collect { state = state.copy(connection = it) } }
         viewModelScope.launch {
-            client.welcome.collect { w -> if (w != null) state = state.copy(me = w.player, ratings = w.ratings) }
+            client.welcome.collect { w ->
+                if (w != null) state = state.copy(me = w.player, ratings = w.ratings, registered = w.registered)
+            }
         }
         viewModelScope.launch { client.messages.collect(::onMessage) }
         // A game that started before this screen existed (the server sends it on connect) is asked for again.
@@ -277,7 +281,8 @@ class OnlineViewModel(
             }
             is ServerMessage.Error -> onError(message)
             is ServerMessage.Welcome, is ServerMessage.Pong, ServerMessage.AccountDeleted,
-            is ServerMessage.Tournaments, is ServerMessage.Tournament,
+            is ServerMessage.Tournaments, is ServerMessage.Tournament, is ServerMessage.LoggedIn, ServerMessage.PasswordChanged,
+            ServerMessage.SignedInElsewhere,
             -> Unit
         }
     }

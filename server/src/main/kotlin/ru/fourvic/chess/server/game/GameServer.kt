@@ -118,7 +118,11 @@ class GameServer(
     /** [country] comes from the region in the device's language settings; it is shown as a flag. */
     fun connected(account: Account, token: String, connection: ClientConnection, country: String? = null) {
         if (country != null) countries[account.id] = country
-        connections.put(account.id, connection)?.takeIf { it !== connection }?.close()
+        // One device plays for an account at a time: the newest one.
+        connections.put(account.id, connection)?.takeIf { it !== connection }?.let { previous ->
+            previous.send(ServerMessage.SignedInElsewhere)
+            previous.close()
+        }
         connection.send(welcome(account, token))
         val room = activeGameOf(account.id) ?: return
         connection.send(ServerMessage.Game(room.snapshot()))
@@ -166,14 +170,34 @@ class GameServer(
                 send(id, ServerMessage.Pong(message.clientTime, now()))
                 null
             }
-            is ClientMessage.Rename -> {
-                val renamed = accounts.rename(id, message.name)
-                if (renamed == null) {
-                    ServerMessage.Error(ErrorCode.BAD_REQUEST, "Name must be 3-20 letters, digits, spaces, _ or -")
-                } else {
-                    send(id, welcome(renamed, token = ""))
+            is ClientMessage.Rename -> when (val r = accounts.rename(id, message.name)) {
+                is AccountService.Result.Ok -> {
+                    send(id, welcome(r.value, token = ""))
                     null
                 }
+                is AccountService.Result.Failed -> accountError(r.problem)
+            }
+            is ClientMessage.Register -> when (val r = accounts.register(id, message.name, message.password)) {
+                is AccountService.Result.Ok -> {
+                    send(id, welcome(r.value, token = ""))
+                    null
+                }
+                is AccountService.Result.Failed -> accountError(r.problem)
+            }
+            // The reply goes to this connection; the device then connects again with the new token.
+            is ClientMessage.Login -> when (val r = accounts.login(message.name, message.password)) {
+                is AccountService.Result.Ok -> {
+                    send(id, ServerMessage.LoggedIn(r.value.token))
+                    null
+                }
+                is AccountService.Result.Failed -> accountError(r.problem)
+            }
+            is ClientMessage.ChangePassword -> when (val r = accounts.changePassword(id, message.oldPassword, message.newPassword)) {
+                is AccountService.Result.Ok -> {
+                    send(id, ServerMessage.PasswordChanged)
+                    null
+                }
+                is AccountService.Result.Failed -> accountError(r.problem)
             }
             ClientMessage.DeleteAccount -> {
                 deleteAccount(id)
@@ -181,6 +205,16 @@ class GameServer(
             }
         }
         error?.let { send(id, it) }
+    }
+
+    private fun accountError(problem: AccountService.Problem): ServerMessage.Error = when (problem) {
+        AccountService.Problem.INVALID_NAME -> ServerMessage.Error(ErrorCode.INVALID_NAME, "Name must be 3-20 letters, digits, spaces, _ or -")
+        AccountService.Problem.NAME_TAKEN -> ServerMessage.Error(ErrorCode.NAME_TAKEN, "This name is taken")
+        AccountService.Problem.WEAK_PASSWORD ->
+            ServerMessage.Error(ErrorCode.WEAK_PASSWORD, "Password must be ${AccountService.MIN_PASSWORD}-${AccountService.MAX_PASSWORD} characters")
+        AccountService.Problem.WRONG_PASSWORD -> ServerMessage.Error(ErrorCode.WRONG_PASSWORD, "Wrong name or password")
+        AccountService.Problem.TOO_MANY_ATTEMPTS -> ServerMessage.Error(ErrorCode.TOO_MANY_ATTEMPTS, "Too many attempts, try again later")
+        AccountService.Problem.ALREADY_SAVED, AccountService.Problem.NOT_SAVED -> ServerMessage.Error(ErrorCode.BAD_REQUEST, problem.name)
     }
 
     private fun roomFor(accountId: String, gameId: String): GameRoom? = rooms[gameId]?.takeIf { it.colorOf(accountId) != null }
@@ -396,6 +430,7 @@ class GameServer(
             PlayerInfo(account.id, account.name, blitz.rating.rating.roundToInt(), blitz.provisional, countries[account.id]),
             token,
             ratings,
+            registered = account.registered,
         )
     }
 

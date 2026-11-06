@@ -39,8 +39,8 @@ class StorageTest {
         assertTrue(!again.created)
 
         assertNotEquals(session.account.id, accounts.authenticate("unknown-token-1234567890").account.id)
-        assertNull(accounts.rename(session.account.id, "x"))
-        assertEquals("Магнус", accounts.rename(session.account.id, "Магнус")?.name)
+        assertEquals(AccountService.Result.Failed(AccountService.Problem.INVALID_NAME), accounts.rename(session.account.id, "x"))
+        assertEquals("Магнус", (accounts.rename(session.account.id, "Магнус") as AccountService.Result.Ok).value.name)
 
         storage.saveRating(session.account.id, Speed.BLITZ, StoredRating(Rating(1600.0, 80.0, 0.06), 3))
         storage.saveGame(
@@ -73,5 +73,32 @@ class StorageTest {
         storage.saveGame(record)
         val loaded = assertNotNull(storage.gamesOf("b").singleOrNull())
         assertEquals(record, loaded)
+    }
+
+    @Test
+    fun savedAccountsHaveUniqueNamesAndSeveralSessions() = storages().forEach { storage ->
+        val a = storage.createAccount("a", "Игрок1", "token-a", 1)
+        val b = storage.createAccount("b", "Игрок2", "token-b", 1)
+        assertTrue(storage.register(a.id, "Magnus", "hash-a"))
+        assertTrue(storage.findAccount(a.id)!!.registered)
+        assertEquals(a.id, storage.findAccountByLogin("magnus")?.id)
+        assertTrue(!storage.register(b.id, "MAGNUS", "hash-b"), "names are unique regardless of case")
+        assertTrue(storage.rename(b.id, "magnus"), "storage does not reserve names for guests; AccountService checks that")
+
+        assertTrue(storage.register(b.id, "Carlsen", "hash-b"))
+        assertTrue(!storage.rename(b.id, "Magnus"), "a saved account cannot take another saved name")
+        assertTrue(storage.rename(a.id, "Magnus_88"))
+        assertNull(storage.findAccountByLogin("magnus"), "the old name is free after a rename")
+        assertTrue(storage.rename(b.id, "Magnus"))
+
+        storage.addSession(a.id, "token-a2", 2)
+        assertEquals(a.id, storage.findAccountByTokenHash("token-a")?.id)
+        assertEquals(a.id, storage.findAccountByTokenHash("token-a2")?.id)
+        storage.setPassword(a.id, "hash-a2")
+        assertEquals("hash-a2", storage.findAccount(a.id)?.passwordHash)
+
+        storage.deleteAccount(a.id)
+        assertNull(storage.findAccountByTokenHash("token-a2"), "sessions go with the account")
+        assertNull(storage.findAccountByLogin("magnus_88"))
     }
 }

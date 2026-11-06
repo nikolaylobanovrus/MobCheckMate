@@ -104,6 +104,9 @@
     <!-- Онлайн-игра -->
     <string name="online_connecting">Подключение к серверу…</string>
     <string name="online_reconnecting">Связь потеряна, переподключаемся…</string>
+    <string name="online_replaced">Аккаунт открыт на другом устройстве</string>
+    <string name="online_replaced_hint">Партии и турниры продолжаются там. Чтобы играть здесь, нажмите кнопку — на другом устройстве игра остановится.</string>
+    <string name="online_play_here">Играть здесь</string>
     <string name="online_offline">Нет связи с сервером</string>
     <string name="online_offline_hint">Проверьте интернет и попробуйте ещё раз.</string>
     <string name="online_retry">Повторить</string>
@@ -179,6 +182,39 @@
     <string name="settings_delete_text">Имя, рейтинги и партии будут удалены с сервера. Это нельзя отменить.</string>
     <string name="settings_delete">Удалить</string>
     <string name="settings_account_deleted">Аккаунт удалён.</string>
+    <!-- Сохранение аккаунта по имени и паролю -->
+    <string name="account_guest_badge">Гость</string>
+    <string name="account_saved_badge">Сохранён</string>
+    <string name="account_guest_hint">Вы играете как гость: аккаунт есть только на этом телефоне. Сохраните его с именем и паролем, чтобы не потерять рейтинг и играть с другого устройства.</string>
+    <string name="account_saved_hint">Входите с этим именем и своим паролем на любом устройстве.</string>
+    <string name="account_save">Сохранить аккаунт</string>
+    <string name="account_save_title">Сохранить аккаунт</string>
+    <string name="account_save_text">Рейтинг и партии останутся с вами. Почту мы не спрашиваем, поэтому забытый пароль восстановить нельзя — запишите его.</string>
+    <string name="account_sign_in">Войти</string>
+    <string name="account_sign_in_title">Вход в сохранённый аккаунт</string>
+    <string name="account_sign_in_text">Гостевой аккаунт на этом телефоне останется в прошлом; если он нужен, сначала сохраните его.</string>
+    <string name="account_sign_in_action">Войти</string>
+    <string name="account_change_password">Сменить пароль</string>
+    <string name="account_sign_out">Выйти</string>
+    <string name="account_sign_out_title">Выйти из аккаунта?</string>
+    <string name="account_sign_out_text">На этом телефоне вы станете новым гостем. Чтобы вернуться в этот аккаунт, понадобятся имя и пароль.</string>
+    <string name="account_password">Пароль</string>
+    <string name="account_password_old">Текущий пароль</string>
+    <string name="account_password_repeat">Повторите пароль</string>
+    <string name="account_password_rules">От 8 до 128 символов</string>
+    <string name="account_password_mismatch">Пароли не совпадают</string>
+    <string name="account_wait">Ждём ответа сервера…</string>
+    <string name="account_saved">Аккаунт сохранён.</string>
+    <string name="account_signed_in">Вы вошли в аккаунт.</string>
+    <string name="account_password_changed">Пароль изменён.</string>
+    <string name="account_renamed">Имя изменено.</string>
+    <string name="account_error_name_taken">Это имя занято, выберите другое.</string>
+    <string name="account_error_wrong_password">Неверное имя или пароль.</string>
+    <string name="account_error_too_many">Слишком много попыток. Попробуйте через 15 минут.</string>
+    <string name="account_error_slow_down">Слишком много попыток подряд. Подождите минуту и попробуйте снова.</string>
+    <string name="account_error_offline">Нет связи с сервером. Попробуйте ещё раз.</string>
+    <string name="account_error_other">Что-то пошло не так. Попробуйте ещё раз.</string>
+    <string name="online_guest_hint">Вы играете как гость. Сохраните аккаунт в настройках, чтобы не потерять рейтинг при смене телефона.</string>
     <string name="settings_server">Адрес сервера (для тестирования)</string>
     <string name="settings_server_hint">Оставьте пустым, чтобы использовать %1$s</string>
     <!-- Турниры -->

@@ -68,6 +68,9 @@ class TournamentViewModel(
         }
     }
 
+    /** Connects again: after a lost connection, or to take the account back from another device. */
+    fun reconnect() = client.start()
+
     fun refreshList() {
         client.send(ClientMessage.ListTournaments)
     }

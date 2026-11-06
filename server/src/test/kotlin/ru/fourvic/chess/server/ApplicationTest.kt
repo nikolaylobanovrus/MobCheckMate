@@ -16,6 +16,7 @@ import ru.fourvic.chess.server.storage.InMemoryStorage
 import ru.fourvic.chess.shared.protocol.ClientMessage
 import ru.fourvic.chess.shared.protocol.Clock
 import ru.fourvic.chess.shared.protocol.EndReason
+import ru.fourvic.chess.shared.protocol.ErrorCode
 import ru.fourvic.chess.shared.protocol.GameResult
 import ru.fourvic.chess.shared.protocol.ServerMessage
 import ru.fourvic.chess.shared.protocol.decodeServerMessage
@@ -118,5 +119,53 @@ class ApplicationTest {
         white.expect<ServerMessage.AccountDeleted>()
         val notice = black.expect<ServerMessage.Ended>()
         assertNotNull(notice)
+    }
+
+    @Test
+    fun savedAccountSignsInOnAnotherDevice() = testApplication {
+        application { module(InMemoryStorage()) }
+        val ws = createClient { install(ClientWebSockets) }
+
+        val (phone, guest) = ws.join()
+        assertFalse(guest.registered)
+        phone.sendMessage(ClientMessage.Register("Magnus_88", "short"))
+        assertEquals(ErrorCode.WEAK_PASSWORD, phone.expect<ServerMessage.Error>().code)
+        phone.sendMessage(ClientMessage.Register("Magnus_88", "correct horse"))
+        val saved = phone.expect<ServerMessage.Welcome>()
+        assertTrue(saved.registered)
+        assertEquals("Magnus_88", saved.player.name)
+
+        val (tablet, _) = ws.join()
+        tablet.sendMessage(ClientMessage.Login("magnus_88", "wrong password"))
+        assertEquals(ErrorCode.WRONG_PASSWORD, tablet.expect<ServerMessage.Error>().code)
+        tablet.sendMessage(ClientMessage.Login("magnus_88", "correct horse"))
+        val token = tablet.expect<ServerMessage.LoggedIn>().token
+        tablet.close()
+
+        val (again, signedIn) = ws.join(token)
+        assertEquals(guest.player.id, signedIn.player.id)
+        assertTrue(signedIn.registered)
+        // One device plays for an account at a time: the phone is told and disconnected.
+        phone.expect<ServerMessage.SignedInElsewhere>()
+        again.sendMessage(ClientMessage.ChangePassword("correct horse", "battery staple"))
+        again.expect<ServerMessage.PasswordChanged>()
+        again.close()
+        phone.close()
+    }
+
+    @Test
+    fun passwordAttemptsAreLimitedPerConnection() = testApplication {
+        application { module(InMemoryStorage()) }
+        val ws = createClient { install(ClientWebSockets) }
+        val (device, _) = ws.join()
+        // Different names, so the per-name lockout does not kick in first.
+        repeat(6) { device.sendMessage(ClientMessage.Login("nobody$it", "some password")) }
+        val codes = List(6) { device.expect<ServerMessage.Error>().code }
+        assertEquals(5, codes.count { it == ErrorCode.WRONG_PASSWORD }, codes.toString())
+        assertEquals(1, codes.count { it == ErrorCode.RATE_LIMITED }, codes.toString())
+        // Other messages are not held up by the password queue.
+        device.sendMessage(ClientMessage.Ping(1))
+        device.expect<ServerMessage.Pong>()
+        device.close()
     }
 }

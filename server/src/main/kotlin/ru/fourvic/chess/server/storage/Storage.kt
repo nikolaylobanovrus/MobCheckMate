@@ -7,7 +7,16 @@ import ru.fourvic.chess.shared.protocol.Speed
 import ru.fourvic.chess.shared.rating.Rating
 import java.util.concurrent.ConcurrentHashMap
 
-data class Account(val id: String, val name: String, val createdAt: Long)
+/**
+ * A player. Everyone starts as a guest known by a secret token on the device; a player who saves the account
+ * picks a unique name and a password ([passwordHash]) to sign in on other devices.
+ */
+data class Account(val id: String, val name: String, val createdAt: Long, val passwordHash: String? = null) {
+    val registered: Boolean get() = passwordHash != null
+}
+
+/** Names of saved accounts are unique regardless of letter case. */
+fun loginOf(name: String): String = name.trim().lowercase()
 
 data class StoredRating(val rating: Rating = Rating(), val games: Int = 0) {
     val provisional: Boolean get() = rating.isProvisional()
@@ -31,12 +40,26 @@ data class GameRecord(
 
 /** Persistence for accounts, ratings and finished games. Implementations must be thread-safe. */
 interface Storage {
+    /** A guest account with its first session. */
     fun createAccount(id: String, name: String, tokenHash: String, now: Long): Account
     fun findAccountByTokenHash(tokenHash: String): Account?
     fun findAccount(id: String): Account?
-    fun rename(id: String, name: String)
 
-    /** Deletes the account and its ratings; finished games keep the moves but lose the link to the player. */
+    /** The saved account with this name, ignoring case. */
+    fun findAccountByLogin(login: String): Account?
+
+    /** Another device signed in: one more token for the same account. */
+    fun addSession(accountId: String, tokenHash: String, now: Long)
+
+    /** Renames the account; a saved account keeps its name unique. False when another saved account has it. */
+    fun rename(id: String, name: String): Boolean
+
+    /** Saves a guest account under [name] with a password. False when another saved account has the name. */
+    fun register(id: String, name: String, passwordHash: String): Boolean
+
+    fun setPassword(id: String, passwordHash: String)
+
+    /** Deletes the account, its sessions and ratings; finished games keep the moves but lose the link to the player. */
     fun deleteAccount(id: String)
 
     fun rating(accountId: String, speed: Speed): StoredRating
@@ -49,6 +72,7 @@ interface Storage {
 class InMemoryStorage : Storage {
     private val accounts = ConcurrentHashMap<String, Account>()
     private val tokens = ConcurrentHashMap<String, String>()
+    private val logins = ConcurrentHashMap<String, String>()
     private val ratings = ConcurrentHashMap<Pair<String, Speed>, StoredRating>()
     private val games = java.util.concurrent.CopyOnWriteArrayList<GameRecord>()
 
@@ -61,14 +85,41 @@ class InMemoryStorage : Storage {
 
     override fun findAccountByTokenHash(tokenHash: String) = tokens[tokenHash]?.let { accounts[it] }
     override fun findAccount(id: String) = accounts[id]
+    override fun findAccountByLogin(login: String) = logins[login]?.let { accounts[it] }
 
-    override fun rename(id: String, name: String) {
-        accounts.computeIfPresent(id) { _, a -> a.copy(name = name) }
+    override fun addSession(accountId: String, tokenHash: String, now: Long) {
+        tokens[tokenHash] = accountId
     }
 
+    @Synchronized
+    override fun rename(id: String, name: String): Boolean {
+        val account = accounts[id] ?: return false
+        if (account.registered) {
+            val owner = logins.putIfAbsent(loginOf(name), id)
+            if (owner != null && owner != id) return false
+            if (loginOf(account.name) != loginOf(name)) logins.remove(loginOf(account.name), id)
+        }
+        accounts[id] = account.copy(name = name)
+        return true
+    }
+
+    @Synchronized
+    override fun register(id: String, name: String, passwordHash: String): Boolean {
+        val account = accounts[id] ?: return false
+        if (logins.putIfAbsent(loginOf(name), id) != null) return false
+        accounts[id] = account.copy(name = name, passwordHash = passwordHash)
+        return true
+    }
+
+    override fun setPassword(id: String, passwordHash: String) {
+        accounts.computeIfPresent(id) { _, a -> a.copy(passwordHash = passwordHash) }
+    }
+
+    @Synchronized
     override fun deleteAccount(id: String) {
         accounts.remove(id)
         tokens.entries.removeIf { it.value == id }
+        logins.entries.removeIf { it.value == id }
         ratings.keys.removeIf { it.first == id }
         games.replaceAll { g ->
             g.copy(whiteId = if (g.whiteId == id) DELETED else g.whiteId, blackId = if (g.blackId == id) DELETED else g.blackId)

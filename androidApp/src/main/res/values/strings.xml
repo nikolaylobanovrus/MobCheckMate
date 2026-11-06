@@ -102,6 +102,9 @@
     <!-- Online play -->
     <string name="online_connecting">Connecting to the server…</string>
     <string name="online_reconnecting">Connection lost, reconnecting…</string>
+    <string name="online_replaced">Your account is open on another device</string>
+    <string name="online_replaced_hint">Games and tournaments go on there. To play here instead, tap the button: the other device will stop.</string>
+    <string name="online_play_here">Play here</string>
     <string name="online_offline">No connection to the server</string>
     <string name="online_offline_hint">Check the internet connection and try again.</string>
     <string name="online_retry">Retry</string>
@@ -177,6 +180,39 @@
     <string name="settings_delete_text">Your name, ratings and games will be removed from the server. This cannot be undone.</string>
     <string name="settings_delete">Delete</string>
     <string name="settings_account_deleted">The account has been deleted.</string>
+    <!-- Saving the account with a name and password -->
+    <string name="account_guest_badge">Guest</string>
+    <string name="account_saved_badge">Saved</string>
+    <string name="account_guest_hint">You play as a guest: the account lives on this phone only. Save it with a name and password to keep your rating and play from another device.</string>
+    <string name="account_saved_hint">Sign in with this name and your password on any device.</string>
+    <string name="account_save">Save account</string>
+    <string name="account_save_title">Save the account</string>
+    <string name="account_save_text">Your rating and games stay with you. We do not ask for an email, so a forgotten password cannot be restored: write it down.</string>
+    <string name="account_sign_in">Sign in</string>
+    <string name="account_sign_in_title">Sign in to a saved account</string>
+    <string name="account_sign_in_text">The guest account on this phone will be left behind; save it first if you want to keep it.</string>
+    <string name="account_sign_in_action">Sign in</string>
+    <string name="account_change_password">Change password</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_sign_out_title">Sign out?</string>
+    <string name="account_sign_out_text">You will play as a new guest on this phone. To come back to this account you need its name and password.</string>
+    <string name="account_password">Password</string>
+    <string name="account_password_old">Current password</string>
+    <string name="account_password_repeat">Repeat the password</string>
+    <string name="account_password_rules">8 to 128 characters</string>
+    <string name="account_password_mismatch">The passwords do not match</string>
+    <string name="account_wait">Waiting for the server…</string>
+    <string name="account_saved">The account is saved.</string>
+    <string name="account_signed_in">You are signed in.</string>
+    <string name="account_password_changed">The password is changed.</string>
+    <string name="account_renamed">The name is changed.</string>
+    <string name="account_error_name_taken">This name is taken; try another one.</string>
+    <string name="account_error_wrong_password">Wrong name or password.</string>
+    <string name="account_error_too_many">Too many attempts. Try again in 15 minutes.</string>
+    <string name="account_error_slow_down">Too many attempts in a row. Wait a minute and try again.</string>
+    <string name="account_error_offline">No connection to the server. Try again.</string>
+    <string name="account_error_other">Something went wrong. Try again.</string>
+    <string name="online_guest_hint">You play as a guest. Save the account in Settings to keep your rating on another phone.</string>
     <string name="settings_server">Server address (for testing)</string>
     <string name="settings_server_hint">Leave empty to use %1$s</string>
     <!-- Tournaments -->
